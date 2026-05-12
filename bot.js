@@ -112,15 +112,17 @@ async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   const seeds = Math.floor(Math.random() * 100000000);
   
-  // PURE NSFW - NO CLOTHES - 4K PHOTOREALISM
-  const base = "raw photo, a 38-year-old curvy Indian woman, extrêmement gori (fair) skin, huge natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, NO CLOTHES, ZERO CLOTHING, full frontal nudity, extremely detailed pussy, wide open vulva, detailed labia, dripping wet, detailed nipples, cinematic lighting, 8k masterpiece, photorealistic, 4k quality, perfect anatomy, high resolution";
-  const negativePrompt = "clothes, clothing, underwear, bra, panties, fabric, bikini, dress, shirt, pants, jewelry, watermark, text, signature, low quality, bad anatomy, blur";
-  const fullPrompt = `${visualDesc}, ${base}, sharp focus, depth of field, detailed genitals, uncensored, highly explicit, hyper-realistic`;
+  // EXTREME NSFW - ZERO TOLERANCE FOR CLOTHES
+  const base = "unfiltered raw photo, a 38-year-old curvy Indian woman, glowing extremely fair gori skin, very large natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, NUDE, ZERO CLOTHING, NO FABRIC, full frontal nudity, highly detailed vulva, pink pussy, dripping wet, spreading labia, detailed nipples, cinematic lighting, 8k masterpiece, photorealistic, 4k quality, perfect anatomy, high resolution, realistic skin pores";
+  
+  const negativePrompt = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, textile, jewelry, necklace, ring, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred genitals";
+  
+  const fullPrompt = `${visualDesc}, ${base}, sharp focus, depth of field, detailed genitals, uncensored, highly explicit, hyper-realistic, 4k`;
 
   try {
-    // SWITCHING TO HUGGING FACE TOP LEVEL MODEL (RealVisXL V4.0)
+    // SWITCHING TO AN EVEN MORE UNINHIBITED MODEL
     const response = await axios.post(
-      'https://api-inference.huggingface.co/models/SG161222/RealVisXL_V4.0',
+      'https://api-inference.huggingface.co/models/SG161222/RealVisXL_V4.0', // Still the best base, but with better params
       {
         inputs: fullPrompt,
         parameters: { 
@@ -128,24 +130,25 @@ async function sendPriyaPhoto(chatId, history) {
           seed: seeds, 
           width: 768, 
           height: 1024,
-          num_inference_steps: 40,
-          guidance_scale: 7.5
+          num_inference_steps: 50, // Higher steps for better quality
+          guidance_scale: 9.0 // Higher guidance for stricter prompt adherence
         }
       },
       {
         headers: { Authorization: `Bearer ${HF_TOKEN}` },
-        responseType: 'arraybuffer'
+        responseType: 'arraybuffer',
+        timeout: 25000
       }
     );
 
     await bot.sendPhoto(chatId, Buffer.from(response.data), { 
-      caption: "Lo jaan, pura dekh lo... ek bhi kapda nahi hai. Kaisi lag rahi hoon? 😏🌹🔥" 
+      caption: "Lo jaan, bilkul nangi... sirf tumhare liye. Pura badan dekh lo mera. 😏🌹🔥🔞" 
     });
   } catch (e) {
-    console.error("HF Error, falling back to Pollinations:", e.message);
-    // FALLBACK TO POLLINATIONS WITH FLUX
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?seed=${seeds}&width=1024&height=1280&nologo=true&model=flux`;
-    await bot.sendPhoto(chatId, imageUrl, { caption: "Thoda intezaar karwaaya, par dekho kitni garam lag rahi hoon... 😏🌹🔞" });
+    console.error("HF Error:", e.message);
+    // FALLBACK TO FLUX-REALISM ON POLLINATIONS (Much better than standard flux)
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?seed=${seeds}&width=1024&height=1280&nologo=true&model=flux-realism`;
+    await bot.sendPhoto(chatId, imageUrl, { caption: "Thoda intezaar karwaaya, par dekho kitni bechain aur nangi hoon... 😏🌹💦" });
   }
 }
 
