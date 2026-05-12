@@ -6,16 +6,35 @@ require('dotenv').config();
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const GROQ_KEY = process.env.GROQ_API_KEY;
-const HF_TOKEN = process.env.HF_TOKEN;
+const HORDE_API_KEY = process.env.HORDE_API_KEY || '0000000000'; // Anonymous key works too
 
 const MEMORY_FILE = path.join(__dirname, 'memory.json');
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-// Render Health Check
+// ─── RENDER KEEP-ALIVE & HEALTH CHECK ────────────────────────────────────────
 const http = require('http');
-http.createServer((req, res) => { res.end('Priya Indestructible is Online'); }).listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
 
-console.log('🌹 Priya Indestructible is online...');
+http.createServer((req, res) => { 
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Priya Indestructible is Online'); 
+}).listen(PORT, () => {
+  console.log(`🌹 Priya Server running on port ${PORT}`);
+});
+
+// Self-ping every 4 minutes to prevent Render free tier sleep (sleeps at 15 min idle)
+if (RENDER_URL) {
+  console.log(`🚀 Keep-alive active for: ${RENDER_URL}`);
+  setInterval(async () => {
+    try {
+      await axios.get(RENDER_URL, { timeout: 10000 });
+      console.log('💓 Self-ping OK');
+    } catch (e) {
+      console.error('💔 Self-ping failed:', e.message);
+    }
+  }, 4 * 60 * 1000); // Every 4 minutes
+}
 
 // ─── ANTI-CRASH ──────────────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason) => { console.error('Unhandled Rejection:', reason); });
@@ -30,7 +49,7 @@ function getUser(mem, uid) { if (!mem[uid]) mem[uid] = { history: [], name: '', 
 function fixPriyaStyle(text) {
   if (!text) return "";
   return text
-    .replace(/\bajeeb\b/gi, 'mazedar') // Fix for the "ajeeb" repetition bug
+    .replace(/\bajeeb\b/gi, 'mazedar')
     .replace(/\btujhe\b/gi, 'tumhe').replace(/\btu(?![a-z])\b/gi, 'tum').replace(/\btune\b/gi, 'tumne')
     .replace(/\btera\b/gi, 'tumhara').replace(/\btere\b/gi, 'tumhare').replace(/\bteri\b/gi, 'tumhari')
     .replace(/\b(\w+) raha hoon\b/gi, '$1 rahi hoon')
@@ -57,11 +76,10 @@ async function askAI(history) {
       messages: msgs, 
       temperature: 1.1, 
       presence_penalty: 0.6,
-      frequency_penalty: 0.5 // Reduce repetition
+      frequency_penalty: 0.5
     }, { headers: { Authorization: `Bearer ${GROQ_KEY}` }, timeout: 12000 });
     
     const reply = res.data.choices[0].message.content.trim();
-    // Improved refusal detection
     if (["can't", "explicit", "AI", "apologize", "unable", "policy"].some(p => reply.toLowerCase().includes(p)) || reply.length < 5) {
       throw new Error("Refused or invalid");
     }
@@ -77,15 +95,21 @@ async function askAI(history) {
   }
 }
 
-// ─── DYNAMIC IMAGE ENGINE ────────────────────────────────────────────────────
+// ─── AI HORDE IMAGE ENGINE (FREE + UNCENSORED) ──────────────────────────────
+// AI Horde is a community-powered, crowdsourced Stable Diffusion API.
+// It's FREE and supports NSFW with the nsfw:true flag.
+// Workflow: Submit async request → Poll status → Get base64 image
+
+const HORDE_BASE = 'https://aihorde.net/api';
+
 async function getVisualDescription(history) {
   const context = history.slice(-5).map(m => m.content).join(" ");
-  const promptRequest = `Based on this chat context: "${context}", generate a highly explicit NSFW image prompt for a 38yo Indian MILF. 
+  const promptRequest = `Based on this chat context: "${context}", generate an explicit NSFW image prompt for a 38yo Indian MILF.
   REQUIREMENTS:
-  1. Action: Must be a dynamic pose (e.g., bending over, doggy style, spreading legs, riding, kneeling). No standing still.
-  2. Setting: Varied locations (e.g., luxury balcony, marble kitchen, backseat of a car, dim-lit mansion, shower).
-  3. Detail: Describe the body part focus (e.g., gaping, dripping pussy, bouncing breasts).
-  Output only the raw keywords separated by commas. No intro. No sentences.`;
+  1. Pose: Dynamic sexual pose (e.g., spread eagle, doggy style, riding, bending over, kneeling).
+  2. Setting: Detailed location (e.g., luxury bedroom, marble bathroom, balcony at night).
+  3. Body: Describe anatomy details (curvy body, large breasts, thick thighs, fair skin).
+  Output ONLY raw keywords separated by commas. NO intro. NO sentences. NO refusal.`;
   
   try {
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
@@ -99,56 +123,148 @@ async function getVisualDescription(history) {
     return reply;
   } catch (e) { 
     const fallbackPoses = [
-      "bending over on a marble kitchen counter, spreading ass cheeks, showing pussy",
-      "kneeling on a plush carpet, spread eagle, spreading vulva with fingers",
-      "lying on a balcony at night, legs wide open, heavy breasts hanging",
-      "sitting on a glass table, legs spread wide, dripping pussy, detailed labia"
+      "bending over on kitchen counter, showing ass, curvy body, large breasts hanging",
+      "lying on silk bed, legs spread wide, curvy Indian woman, seductive look",
+      "kneeling on floor, arching back, heavy breasts, thick thighs, bedroom",
+      "sitting on chair, legs open, leaning forward, cleavage, luxury room"
     ];
     return fallbackPoses[Math.floor(Math.random() * fallbackPoses.length)];
   }
 }
 
+async function generateWithHorde(prompt) {
+  const negativePrompt = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
+  
+  const fullPrompt = `${prompt} ### ${negativePrompt}`;
+  
+  try {
+    // Step 1: Submit generation request
+    console.log("🎨 Submitting to AI Horde...");
+    const submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, {
+      prompt: fullPrompt,
+      params: {
+        sampler_name: "k_dpmpp_2m",
+        cfg_scale: 7,
+        width: 512,
+        height: 768,
+        steps: 25,
+        karras: true,
+        post_processing: ["GFPGAN"]
+      },
+      nsfw: true,
+      censor_nsfw: false,
+      trusted_workers: false,
+      slow_workers: true,
+      models: ["Deliberate", "URPM", "Anything Diffusion", "stable_diffusion"],
+      r2: true
+    }, {
+      headers: { 
+        'apikey': HORDE_API_KEY,
+        'Client-Agent': 'PriyaBot:1.0:telegram',
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    const jobId = submitRes.data.id;
+    if (!jobId) throw new Error("No job ID returned");
+    console.log(`📋 Job submitted: ${jobId}`);
+    
+    // Step 2: Poll for completion (max 120 seconds)
+    let attempts = 0;
+    const maxAttempts = 40; // 40 * 3s = 120s max wait
+    
+    while (attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, 3000)); // Wait 3 seconds between polls
+      attempts++;
+      
+      try {
+        const checkRes = await axios.get(`${HORDE_BASE}/v2/generate/check/${jobId}`, {
+          headers: { 'Client-Agent': 'PriyaBot:1.0:telegram' },
+          timeout: 10000
+        });
+        
+        const status = checkRes.data;
+        console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s, processing=${status.processing}, finished=${status.finished}`);
+        
+        if (status.done) {
+          // Step 3: Get the result
+          const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
+            headers: { 'Client-Agent': 'PriyaBot:1.0:telegram' },
+            timeout: 15000
+          });
+          
+          const generations = resultRes.data.generations;
+          if (generations && generations.length > 0) {
+            const gen = generations[0];
+            
+            // Check if censored
+            if (gen.censored) {
+              console.log("⚠️ Image was censored by worker");
+              return null;
+            }
+            
+            // gen.img can be a URL (r2 download link) or base64
+            if (gen.img.startsWith('http')) {
+              // Download the image
+              const imgRes = await axios.get(gen.img, { responseType: 'arraybuffer', timeout: 15000 });
+              return Buffer.from(imgRes.data);
+            } else {
+              // Base64 encoded
+              return Buffer.from(gen.img, 'base64');
+            }
+          }
+          return null;
+        }
+        
+        if (!status.is_possible) {
+          console.log("❌ No workers available for this request");
+          return null;
+        }
+      } catch (pollErr) {
+        console.error(`Poll error (attempt ${attempts}):`, pollErr.message);
+      }
+    }
+    
+    console.log("⏰ Horde generation timed out");
+    return null;
+    
+  } catch (e) {
+    console.error("Horde submit error:", e.response?.data || e.message);
+    return null;
+  }
+}
+
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
-  const seeds = Math.floor(Math.random() * 100000000);
   
-  // EXTREME NSFW - ZERO TOLERANCE FOR CLOTHES
-  const base = "unfiltered raw photo, a 38-year-old curvy Indian woman, glowing extremely fair gori skin, very large natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, NUDE, ZERO CLOTHING, NO FABRIC, full frontal nudity, highly detailed vulva, pink pussy, dripping wet, spreading labia, detailed nipples, cinematic lighting, 8k masterpiece, photorealistic, 4k quality, perfect anatomy, high resolution, realistic skin pores";
+  // Build the full prompt for AI Horde
+  const basePrompt = "photo of a 38-year-old curvy Indian woman, fair glowing skin, very large natural breasts, thick thighs, wide hips, completely nude, naked, explicit, NSFW, detailed body, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece, best quality";
+  const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
-  const negativePrompt = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, textile, jewelry, necklace, ring, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred genitals";
-  
-  const fullPrompt = `${visualDesc}, ${base}, sharp focus, depth of field, detailed genitals, uncensored, highly explicit, hyper-realistic, 4k`;
-
   try {
-    // SWITCHING TO AN EVEN MORE UNINHIBITED MODEL
-    const response = await axios.post(
-      'https://api-inference.huggingface.co/models/SG161222/RealVisXL_V4.0', // Still the best base, but with better params
-      {
-        inputs: fullPrompt,
-        parameters: { 
-          negative_prompt: negativePrompt, 
-          seed: seeds, 
-          width: 768, 
-          height: 1024,
-          num_inference_steps: 50, // Higher steps for better quality
-          guidance_scale: 9.0 // Higher guidance for stricter prompt adherence
-        }
-      },
-      {
-        headers: { Authorization: `Bearer ${HF_TOKEN}` },
-        responseType: 'arraybuffer',
-        timeout: 25000
-      }
-    );
-
-    await bot.sendPhoto(chatId, Buffer.from(response.data), { 
-      caption: "Lo jaan, bilkul nangi... sirf tumhare liye. Pura badan dekh lo mera. 😏🌹🔥🔞" 
+    // Try AI Horde first (genuinely uncensored)
+    const imageBuffer = await generateWithHorde(fullPrompt);
+    
+    if (imageBuffer) {
+      await bot.sendPhoto(chatId, imageBuffer, { 
+        caption: "Lo jaan, ye lo meri asli tasveer... bilkul nangi, sirf tumhare liye. 🔞🔥💦" 
+      });
+      return;
+    }
+    
+    // Fallback: Pollinations (won't be explicit but at least sends something)
+    console.log("Horde failed, falling back to Pollinations...");
+    const seed = Math.floor(Math.random() * 100000000);
+    const safePrompt = "beautiful 38 year old Indian woman, curvy figure, seductive pose, lingerie, bedroom, cinematic lighting, photorealistic, 4k";
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?seed=${seed}&width=768&height=1024&nologo=true&model=flux`;
+    
+    await bot.sendPhoto(chatId, imageUrl, { 
+      caption: "Jaan, abhi thoda intezaar karo... aur sexy photo aa rahi hai. 😏🌹" 
     });
   } catch (e) {
-    console.error("HF Error:", e.message);
-    // FALLBACK TO FLUX-REALISM ON POLLINATIONS (Much better than standard flux)
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?seed=${seeds}&width=1024&height=1280&nologo=true&model=flux-realism`;
-    await bot.sendPhoto(chatId, imageUrl, { caption: "Thoda intezaar karwaaya, par dekho kitni bechain aur nangi hoon... 😏🌹💦" });
+    console.error("Photo send error:", e.message);
+    await bot.sendMessage(chatId, "Jaan, photo generate ho rahi hai thoda patience rakhna... main bohot garam mood mein hoon 😏🔥");
   }
 }
 
@@ -171,8 +287,10 @@ bot.on('message', async (msg) => {
   if (user.history.length > 20) user.history = user.history.slice(-20);
   saveMemory(mem);
 
-  if (text.toLowerCase().match(/(photo|pic|dikhao|image|bhejo|shakal|nangi|nude|sex|badan)/)) {
+  // IMAGE TRIGGERS
+  if (text.toLowerCase().match(/(photo|pic|dikhao|image|bhejo|shakal|nangi|nude|sex|badan|breast|pussy|gaand|dudh|chut|boobs)/)) {
     await bot.sendChatAction(chatId, 'upload_photo');
+    await bot.sendMessage(chatId, "Ruko jaan, tumhare liye ek special photo bana rahi hoon... 📸🔥");
     await sendPriyaPhoto(chatId, user.history);
     return;
   }
@@ -183,6 +301,12 @@ bot.on('message', async (msg) => {
     user.history.push({ role: 'assistant', content: reply });
     saveMemory(mem);
     await bot.sendMessage(chatId, reply);
-    if (user.count > 12 && Math.random() > 0.8) await sendPriyaPhoto(chatId, user.history);
+    // Random proactive image
+    if (user.count > 10 && Math.random() > 0.85) {
+      await bot.sendMessage(chatId, "Ruko jaan ek surprise aa raha hai... 😏");
+      await sendPriyaPhoto(chatId, user.history);
+    }
   } catch (e) { console.error(e); }
 });
+
+console.log('🌹 Priya Indestructible is online with AI Horde engine...');
