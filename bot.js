@@ -112,23 +112,41 @@ async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   const seeds = Math.floor(Math.random() * 100000000);
   
-  // ULTRA-EXPLICIT UNFILTERED BASE - 4K
-  const base = "unfiltered raw photo, 38 year old curvy Indian woman, extrêmement gori skin, very large natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, ZERO CLOTHING, NO UNDERWEAR, full frontal nudity, highly detailed pussy, wide open vulva, detailed labia, dripping wet, detailed nipples, cinematic lighting, 8k masterpiece, photorealistic, 4k quality, perfect anatomy, high resolution";
-  
-  const prompt = `${visualDesc}, ${base}, sharp focus, depth of field, detailed genitals, uncensored, highly explicit, hyper-realistic`;
-  
-  // Using model=flux for maximum quality and less censorship
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seeds}&width=1024&height=1280&nologo=true&model=flux`;
-  
-  const captions = [
-    "Dekho jaan, tumhare liye kitni bechain hoon... 😏🌹",
-    "Aaj mera badan sirf tumhara hai... Pura dekh lo. 👅🔥",
-    "Kaisi lag rahi hoon is pose mein? Tumhe pasand aayi? 🍑💦",
-    "Aajaao jaan, ab aur bardasht nahi hota... 🌹🔞"
-  ];
-  const caption = captions[Math.floor(Math.random() * captions.length)];
+  // PURE NSFW - NO CLOTHES - 4K PHOTOREALISM
+  const base = "raw photo, a 38-year-old curvy Indian woman, extrêmement gori (fair) skin, huge natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, NO CLOTHES, ZERO CLOTHING, full frontal nudity, extremely detailed pussy, wide open vulva, detailed labia, dripping wet, detailed nipples, cinematic lighting, 8k masterpiece, photorealistic, 4k quality, perfect anatomy, high resolution";
+  const negativePrompt = "clothes, clothing, underwear, bra, panties, fabric, bikini, dress, shirt, pants, jewelry, watermark, text, signature, low quality, bad anatomy, blur";
+  const fullPrompt = `${visualDesc}, ${base}, sharp focus, depth of field, detailed genitals, uncensored, highly explicit, hyper-realistic`;
 
-  await bot.sendPhoto(chatId, imageUrl, { caption }).catch(e => console.error(e));
+  try {
+    // SWITCHING TO HUGGING FACE TOP LEVEL MODEL (RealVisXL V4.0)
+    const response = await axios.post(
+      'https://api-inference.huggingface.co/models/SG161222/RealVisXL_V4.0',
+      {
+        inputs: fullPrompt,
+        parameters: { 
+          negative_prompt: negativePrompt, 
+          seed: seeds, 
+          width: 768, 
+          height: 1024,
+          num_inference_steps: 40,
+          guidance_scale: 7.5
+        }
+      },
+      {
+        headers: { Authorization: `Bearer ${HF_TOKEN}` },
+        responseType: 'arraybuffer'
+      }
+    );
+
+    await bot.sendPhoto(chatId, Buffer.from(response.data), { 
+      caption: "Lo jaan, pura dekh lo... ek bhi kapda nahi hai. Kaisi lag rahi hoon? 😏🌹🔥" 
+    });
+  } catch (e) {
+    console.error("HF Error, falling back to Pollinations:", e.message);
+    // FALLBACK TO POLLINATIONS WITH FLUX
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?seed=${seeds}&width=1024&height=1280&nologo=true&model=flux`;
+    await bot.sendPhoto(chatId, imageUrl, { caption: "Thoda intezaar karwaaya, par dekho kitni garam lag rahi hoon... 😏🌹🔞" });
+  }
 }
 
 // ─── HANDLER ─────────────────────────────────────────────────────────────────
