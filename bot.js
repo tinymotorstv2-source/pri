@@ -136,10 +136,15 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const uid = String(msg.from.id);
   const text = msg.text;
-  if (!text || text.startsWith('/')) return;
+  if (!text) return;
 
   const mem = loadMemory();
   const user = getUser(mem, uid);
+
+  if (text.startsWith('/start')) {
+    await bot.sendMessage(chatId, "Namaste jaan! Main Priya hoon... Kya tum mujhse baatein karne ke liye taiyar ho? 😏🌹");
+    return;
+  }
   user.history.push({ role: 'user', content: text });
   user.count++;
   if (user.history.length > 20) user.history = user.history.slice(-20);
