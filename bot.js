@@ -80,42 +80,39 @@ async function askAI(history) {
 // ─── DYNAMIC IMAGE ENGINE ────────────────────────────────────────────────────
 async function getVisualDescription(history) {
   const lastUserMsg = history.filter(m => m.role === 'user').pop()?.content || "posing seductive";
-  const promptRequest = `Write a very short, highly explicit NSFW description (5-10 words) of a 37yo Indian woman's pose based on: "${lastUserMsg}". Include words like spreading, bending, naked. No intro.`;
+  const promptRequest = `Extract only the specific body part or pose requested in this message: "${lastUserMsg}". If no specific part, return "full body spreading". Output only the keywords. No sentences. No intro.`;
   
   try {
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
       model: 'llama-3.1-8b-instant', 
       messages: [{ role: 'user', content: promptRequest }],
-      temperature: 0.9
+      temperature: 0.7
     }, { headers: { Authorization: `Bearer ${GROQ_KEY}` }, timeout: 8000 });
     
     const reply = res.data.choices[0].message.content.trim();
     if (["can't", "policy", "unable", "sorry"].some(p => reply.toLowerCase().includes(p))) throw new Error("Refused");
     return reply;
   } catch (e) { 
-    // High-quality fallback if Groq refuses
-    const fallbacks = [
-      "naked, spreading legs wide on a bed, heavy breasts hanging, detailed vulva",
-      "completely nude, bending over in the shower, showing wet ass and pussy",
-      "lying naked on a mansion floor, spread eagle, inviting look, explicit detail",
-      "nude, standing in bedroom, holding breasts up, direct gaze, high resolution"
-    ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    return "full body, spreading pussy, naked";
   }
 }
 
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
-  const seeds = Math.floor(Math.random() * 9999999);
+  const seeds = Math.floor(Math.random() * 99999999);
   
-  // ULTRA-EXPLICIT BASE PROMPT
-  const base = "unfiltered raw photo, 38 year old curvy indian woman, extremely fair gori skin, very large natural breasts, thick wide hips, completely naked, full frontal nudity, highly detailed vulva and pussy, detailed nipples, realistic skin texture, masterpiece, 8k, highly detailed genitals, perfect anatomy, symmetrical body";
+  // PURE NSFW - NO CLOTHES - 4K PHOTOREALISM
+  const base = "RAW photo, a 38-year-old curvy Indian woman, extrêmement gori (fair) skin, huge natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, NO CLOTHES, ZERO CLOTHING, full frontal nudity, extremely detailed vulva, pink pussy, detailed labia, wetness, detailed nipples, realistic skin pores, stretch marks, 8k resolution, cinematic lighting, masterpiece, photorealistic, 4k quality, perfect anatomy";
   
-  const prompt = `${base}, ${visualDesc}, sharp focus, soft lighting, depth of field, high resolution, photorealistic`;
+  // Focus on the specific body part/pose requested
+  const prompt = `${visualDesc}, ${base}, high contrast, sharp focus, highly detailed genitals, unfiltered, uncensored`;
   
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seeds}&width=512&height=768&nologo=true&model=flux`;
+  // Using model=flux for the best quality on Pollinations
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seeds}&width=1024&height=1024&nologo=true&model=flux`;
   
-  await bot.sendPhoto(chatId, imageUrl, { caption: "Kaisi lag rahi hoon bina kapdo ke? Bilkul tumhare liye... 😏🌹" }).catch(e => console.error(e));
+  await bot.sendPhoto(chatId, imageUrl, { 
+    caption: `Dekho jaan, tumne jo kaha wahi dikha rahi hoon... Bilkul nangi, sirf tumhare liye. Kaisi lag rahi hoon? 😏🌹` 
+  }).catch(e => console.error(e));
 }
 
 // ─── HANDLER ─────────────────────────────────────────────────────────────────
