@@ -144,10 +144,10 @@ async function generateWithHorde(prompt) {
       prompt: fullPrompt,
       params: {
         sampler_name: "k_dpmpp_2m",
-        cfg_scale: 7,
+        cfg_scale: 7.5,
         width: 512,
         height: 768,
-        steps: 25,
+        steps: 30,
         karras: true,
         post_processing: ["GFPGAN"]
       },
@@ -155,7 +155,8 @@ async function generateWithHorde(prompt) {
       censor_nsfw: false,
       trusted_workers: false,
       slow_workers: true,
-      models: ["Deliberate", "URPM", "Anything Diffusion", "stable_diffusion"],
+      extra_slow_workers: true,
+      models: ["Deliberate", "Deliberate 3.0", "Realistic Vision", "ICBINP - I Can't Believe It's Not Photography", "Dreamshaper", "Edge Of Realism", "Hentai Diffusion", "Babes"],
       r2: true
     }, {
       headers: { 
@@ -238,30 +239,40 @@ async function generateWithHorde(prompt) {
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   
-  // Build the full prompt for AI Horde
-  const basePrompt = "photo of a 38-year-old curvy Indian woman, fair glowing skin, very large natural breasts, thick thighs, wide hips, completely nude, naked, explicit, NSFW, detailed body, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece, best quality";
+  // Build the full prompt for AI Horde - PURE NSFW
+  const basePrompt = "photo of a 38-year-old curvy Indian woman, fair glowing skin, very large natural breasts, thick thighs, wide hips, completely nude, naked, full nudity, explicit, NSFW, nipples visible, detailed body, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece, best quality";
   const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
+  const captions = [
+    "Lo jaan, ye lo meri asli tasveer... bilkul nangi, sirf tumhare liye. 🔞🔥💦",
+    "Dekho jaan kitni besharam ho gayi main... sab kuch dikha rahi hoon 😏🔥💦",
+    "Tumne maanga tha na? Lo... bilkul nangi khadi hoon tumhare saamne 🔞🌹",
+    "Jaan meri photo dekh ke pagal mat ho jaana... 😏💋🔥"
+  ];
+  const caption = captions[Math.floor(Math.random() * captions.length)];
+  
   try {
-    // Try AI Horde first (genuinely uncensored)
-    const imageBuffer = await generateWithHorde(fullPrompt);
+    // Attempt 1: AI Horde
+    console.log("🎨 Attempt 1: AI Horde...");
+    let imageBuffer = await generateWithHorde(fullPrompt);
     
     if (imageBuffer) {
-      await bot.sendPhoto(chatId, imageBuffer, { 
-        caption: "Lo jaan, ye lo meri asli tasveer... bilkul nangi, sirf tumhare liye. 🔞🔥💦" 
-      });
+      await bot.sendPhoto(chatId, imageBuffer, { caption });
       return;
     }
     
-    // Fallback: Pollinations (won't be explicit but at least sends something)
-    console.log("Horde failed, falling back to Pollinations...");
-    const seed = Math.floor(Math.random() * 100000000);
-    const safePrompt = "beautiful 38 year old Indian woman, curvy figure, seductive pose, lingerie, bedroom, cinematic lighting, photorealistic, 4k";
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?seed=${seed}&width=768&height=1024&nologo=true&model=flux`;
+    // Attempt 2: Retry with different prompt style
+    console.log("🔄 Attempt 2: Retrying AI Horde with simpler prompt...");
+    const retryPrompt = `nude Indian woman, 38 years old, curvy body, large breasts, fair skin, ${visualDesc}, photorealistic, NSFW, explicit`;
+    imageBuffer = await generateWithHorde(retryPrompt);
     
-    await bot.sendPhoto(chatId, imageUrl, { 
-      caption: "Jaan, abhi thoda intezaar karo... aur sexy photo aa rahi hai. 😏🌹" 
-    });
+    if (imageBuffer) {
+      await bot.sendPhoto(chatId, imageBuffer, { caption });
+      return;
+    }
+    
+    // NO clothed fallback - send text message instead
+    await bot.sendMessage(chatId, "Jaan, abhi servers busy hain... thodi der mein phir maango na photo, main bilkul ready hoon tumhare liye 😏🔥💋");
   } catch (e) {
     console.error("Photo send error:", e.message);
     await bot.sendMessage(chatId, "Jaan, photo generate ho rahi hai thoda patience rakhna... main bohot garam mood mein hoon 😏🔥");
