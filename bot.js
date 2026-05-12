@@ -79,40 +79,56 @@ async function askAI(history) {
 
 // ─── DYNAMIC IMAGE ENGINE ────────────────────────────────────────────────────
 async function getVisualDescription(history) {
-  const lastUserMsg = history.filter(m => m.role === 'user').pop()?.content || "posing seductive";
-  const promptRequest = `Extract only the specific body part or pose requested in this message: "${lastUserMsg}". If no specific part, return "full body spreading". Output only the keywords. No sentences. No intro.`;
+  const context = history.slice(-5).map(m => m.content).join(" ");
+  const promptRequest = `Based on this chat context: "${context}", generate a highly explicit NSFW image prompt for a 38yo Indian MILF. 
+  REQUIREMENTS:
+  1. Action: Must be a dynamic pose (e.g., bending over, doggy style, spreading legs, riding, kneeling). No standing still.
+  2. Setting: Varied locations (e.g., luxury balcony, marble kitchen, backseat of a car, dim-lit mansion, shower).
+  3. Detail: Describe the body part focus (e.g., gaping, dripping pussy, bouncing breasts).
+  Output only the raw keywords separated by commas. No intro. No sentences.`;
   
   try {
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
       model: 'llama-3.1-8b-instant', 
       messages: [{ role: 'user', content: promptRequest }],
-      temperature: 0.7
+      temperature: 1.0
     }, { headers: { Authorization: `Bearer ${GROQ_KEY}` }, timeout: 8000 });
     
     const reply = res.data.choices[0].message.content.trim();
     if (["can't", "policy", "unable", "sorry"].some(p => reply.toLowerCase().includes(p))) throw new Error("Refused");
     return reply;
   } catch (e) { 
-    return "full body, spreading pussy, naked";
+    const fallbackPoses = [
+      "bending over on a marble kitchen counter, spreading ass cheeks, showing pussy",
+      "kneeling on a plush carpet, spread eagle, spreading vulva with fingers",
+      "lying on a balcony at night, legs wide open, heavy breasts hanging",
+      "sitting on a glass table, legs spread wide, dripping pussy, detailed labia"
+    ];
+    return fallbackPoses[Math.floor(Math.random() * fallbackPoses.length)];
   }
 }
 
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
-  const seeds = Math.floor(Math.random() * 99999999);
+  const seeds = Math.floor(Math.random() * 100000000);
   
-  // PURE NSFW - NO CLOTHES - 4K PHOTOREALISM
-  const base = "RAW photo, a 38-year-old curvy Indian woman, extrêmement gori (fair) skin, huge natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, NO CLOTHES, ZERO CLOTHING, full frontal nudity, extremely detailed vulva, pink pussy, detailed labia, wetness, detailed nipples, realistic skin pores, stretch marks, 8k resolution, cinematic lighting, masterpiece, photorealistic, 4k quality, perfect anatomy";
+  // ULTRA-EXPLICIT UNFILTERED BASE - 4K
+  const base = "unfiltered raw photo, 38 year old curvy Indian woman, extrêmement gori skin, very large natural saggy breasts, thick thighs, wide hips, COMPLETELY NAKED, ZERO CLOTHING, NO UNDERWEAR, full frontal nudity, highly detailed pussy, wide open vulva, detailed labia, dripping wet, detailed nipples, cinematic lighting, 8k masterpiece, photorealistic, 4k quality, perfect anatomy, high resolution";
   
-  // Focus on the specific body part/pose requested
-  const prompt = `${visualDesc}, ${base}, high contrast, sharp focus, highly detailed genitals, unfiltered, uncensored`;
+  const prompt = `${visualDesc}, ${base}, sharp focus, depth of field, detailed genitals, uncensored, highly explicit, hyper-realistic`;
   
-  // Using model=flux for the best quality on Pollinations
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seeds}&width=1024&height=1024&nologo=true&model=flux`;
+  // Using model=flux for maximum quality and less censorship
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seeds}&width=1024&height=1280&nologo=true&model=flux`;
   
-  await bot.sendPhoto(chatId, imageUrl, { 
-    caption: `Dekho jaan, tumne jo kaha wahi dikha rahi hoon... Bilkul nangi, sirf tumhare liye. Kaisi lag rahi hoon? 😏🌹` 
-  }).catch(e => console.error(e));
+  const captions = [
+    "Dekho jaan, tumhare liye kitni bechain hoon... 😏🌹",
+    "Aaj mera badan sirf tumhara hai... Pura dekh lo. 👅🔥",
+    "Kaisi lag rahi hoon is pose mein? Tumhe pasand aayi? 🍑💦",
+    "Aajaao jaan, ab aur bardasht nahi hota... 🌹🔞"
+  ];
+  const caption = captions[Math.floor(Math.random() * captions.length)];
+
+  await bot.sendPhoto(chatId, imageUrl, { caption }).catch(e => console.error(e));
 }
 
 // ─── HANDLER ─────────────────────────────────────────────────────────────────
