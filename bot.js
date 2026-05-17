@@ -123,12 +123,12 @@ async function askAI(history) {
         // Fallback to Pollinations
         console.log("Switching to Pollinations fallback...");
         try {
-          const pRes = await axios.post('https://text.pollinations.ai/openai', { 
-            model: 'openai', 
+          console.log("Switching to Pollinations fallback...");
+          const pRes = await axios.post('https://text.pollinations.ai/', { 
             messages: msgs, 
-            temperature: 1.2 
+            model: 'mistral'
           }, { timeout: 10000 });
-          return fixPriyaStyle(pRes.data.choices[0].message.content.trim());
+          return fixPriyaStyle(pRes.data.trim());
         } catch (err) {
           console.error("🔥 Pollinations fallback also failed:", err.message);
           throw new Error("All AI endpoints failed");
