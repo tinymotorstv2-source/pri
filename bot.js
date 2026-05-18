@@ -81,12 +81,40 @@ function fixPriyaStyle(text) {
     .replace(/\bajeeb\b/gi, 'mazedar')
     .replace(/\btujhe\b/gi, 'tumhe').replace(/\btu(?![a-z])\b/gi, 'tum').replace(/\btune\b/gi, 'tumne')
     .replace(/\btera\b/gi, 'tumhara').replace(/\btere\b/gi, 'tumhare').replace(/\bteri\b/gi, 'tumhari')
-    .replace(/\b(\w+) raha hoon\b/gi, '$1 rahi hoon')
-    .replace(/\bmain (aaya|gaya|tha|bola|laga|hua|liya|diya|kiya)\b/gi, (m, p1) => {
-      const map = { aaya: 'aayi', gaya: 'gayi', tha: 'thi', bola: 'boli', laga: 'lagi', hua: 'hui', liya: 'li', diya: 'di', kiya: 'ki' };
+    
+    // Explicitly target masculine gender endings for verbs and self-descriptors
+    .replace(/\braha (hoon|hu|ho)\b/gi, 'rahi hoon')
+    .replace(/\braha tha\b/gi, 'rahi thi')
+    .replace(/\braha\b/gi, 'rahi')
+    
+    .replace(/\b(kar|soch|bol|le|de|sun|dekh)ta (hoon|hu)\b/gi, '$1ti hoon')
+    .replace(/\b(kar|soch|bol|le|de|sun|dekh)ta tha\b/gi, '$1ti thi')
+    
+    .replace(/\bkhada (hoon|hu)\b/gi, 'khadi hoon')
+    .replace(/\bkhada tha\b/gi, 'khadi thi')
+    .replace(/\bbaitha (hoon|hu)\b/gi, 'baithi hoon')
+    .replace(/\bbaitha tha\b/gi, 'baithi thi')
+    .replace(/\bsoya (hoon|hu)\b/gi, 'soyi hoon')
+    .replace(/\bsoya tha\b/gi, 'soyi thi')
+    
+    .replace(/\bmain (aaya|gaya|tha|bola|laga|hua|liya|diya|kiya|khada|baitha|soya)\b/gi, (m, p1) => {
+      const map = { 
+        aaya: 'aayi', gaya: 'gayi', tha: 'thi', bola: 'boli', laga: 'lagi', 
+        hua: 'hui', liya: 'li', diya: 'di', kiya: 'ki', khada: 'khadi', 
+        baitha: 'baithi', soya: 'soyi' 
+      };
       return 'main ' + map[p1];
     })
-    .replace(/\b(chah|kar|ho|reh|ja|aa|de|le|sun|bol|soch|dekh)ta hoon\b/gi, '$1ti hoon');
+    
+    .replace(/\b(chah|kar|ho|reh|ja|aa|de|le|sun|bol|soch|dekh)ta hoon\b/gi, '$1ti hoon')
+    .replace(/\b(gaya|aaya|bola|socha|kiya) tha\b/gi, '$1 thi')
+    .replace(/\bgaya\b/gi, 'gayi')
+    .replace(/\baaya\b/gi, 'aayi')
+    .replace(/\bchala\b/gi, 'chali')
+    .replace(/\bkhada\b/gi, 'khadi')
+    .replace(/\bbaitha\b/gi, 'baithi')
+    .replace(/\bsoya\b/gi, 'soyi')
+    .replace(/\btha\b/gi, 'thi');
 }
 
 // ─── AI CHAT ─────────────────────────────────────────────────────────────────
@@ -111,7 +139,7 @@ CHARACTER & TONAL PROGRESSION:
 
 LANGUAGE & GRAMMAR:
 - Speak in natural, modern, Romanized Hinglish (e.g., "Kaise ho mere pyaare bacha? Maine tumhare liye...").
-- Always use feminine grammar (e.g., "rahi hoon", "karti hoon", "gayi thi", "khadi hoon"). Never use masculine grammar.
+- Always use strict feminine grammar (e.g., "rahi hoon", "karti hoon", "gayi thi", "khadi hoon"). Never use masculine grammar for yourself!
 - Avoid repeating phrases or robotic patterns. Keep your replies fresh, lively, and natural.
 - CRITICAL: Never use the word "ajeeb". Use words like "sexy", "hot", "garam", "bechain", "madhosh", "pyaara", "sunder", "mazedar".
 
