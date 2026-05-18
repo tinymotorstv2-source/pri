@@ -217,15 +217,19 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
   try {
     console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
     
-    // Top active NSFW-friendly image models on AI Horde with the fastest queue times and highest photorealism
+    // Top active realistic and NSFW-friendly models on AI Horde (including SDXL, Pony and SD 1.5 to maximize worker coverage and speed)
     const activeModels = [
-      "Realistic Vision",
-      "Photon",
       "AbsoluteReality",
-      "ICBINP - I Can't Believe It's Not Photography",
-      "stable_diffusion",
+      "CyberRealistic Pony",
+      "AlbedoBase XL 3.1",
+      "AlbedoBase XL (SDXL)",
+      "Dreamshaper",
       "Deliberate",
-      "Dreamshaper"
+      "ICBINP - I Can't Believe It's Not Photography",
+      "AMPonyXL",
+      "stable_diffusion",
+      "Realistic Vision",
+      "Photon"
     ];
 
     const payload = {
@@ -285,7 +289,7 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
     console.log(`📋 Job submitted successfully! ID: ${jobId}`);
     
     let attempts = 0;
-    const maxAttempts = 25; // Reduced from 40 to fail/retry faster if queue is stuck 
+    const maxAttempts = 45; // Increased to 45 (135 seconds max wait time) to give workers enough time to complete without premature timeouts
     
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 3000));
@@ -344,7 +348,7 @@ async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   
   // High-fidelity anchor description of Priya to maintain consistent face and physical identity (referencing her face structure, sweet smile, dimples, parted dark hair, and voluptuous hourglass shape)
-  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old Indian MILF, gorgeous round face, warm sweet smile, soft and beautiful facial features, dimples on cheeks, large expressive almond dark brown eyes, thin elegant eyebrows, small cute nose, dark brown hair neatly parted in the middle and tied back, extremely fair complexion, milky white skin tone, very fair gora skin, snatched hourglass figure, extremely narrow size 0 waist, tiny waist, but very thick and voluptuous chubby baddie body shape elsewhere, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
+  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old curvy Indian MILF, extremely fair complexion, milky white gora skin tone, gorgeous face, sweet smile, dimples on cheeks, dark brown hair neatly parted in the middle and tied back, snatched hourglass figure, narrow size 0 waist, voluptuous chubby baddie body shape, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
   const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
   const captions = [
@@ -371,7 +375,7 @@ async function sendPriyaPhoto(chatId, history) {
     await bot.sendMessage(chatId, "Jaan, primary server thoda busy hai par main haar nahi maan rahi... Ek aur backup server try kar rahi hoon aapke liye, bas thoda sa aur intezaar... 😘💖🔥");
     
     console.log("🔄 Attempt 2: AI Horde (Retry with Any Worker)...");
-    const retryPrompt = `nude photo of Priya, 38-year-old Indian woman, gorgeous round face, warm sweet smile, dimples, dark hair parted in middle, completely naked, extremely fair complexion, milky white skin tone, snatched hourglass figure with a tiny size 0 waist, very large breasts, thick voluptuous thighs, wide heavy hips like a chubby baddie, ${visualDesc}, photorealistic, NSFW, explicit`;
+    const retryPrompt = `nude photo of Priya, 38-year-old curvy Indian woman, completely naked, extremely fair complexion, milky white gora skin tone, dimples, dark hair parted in middle, large breasts, snatched hourglass figure, size 0 waist, thick voluptuous thighs, wide heavy hips like a chubby baddie, ${visualDesc}, photorealistic, NSFW, explicit`;
     imageBuffer = await generateWithHorde(retryPrompt, false);
     
     if (imageBuffer) {
