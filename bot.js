@@ -356,35 +356,37 @@ async function sendPriyaPhoto(chatId, history) {
   const caption = captions[Math.floor(Math.random() * captions.length)];
   
   try {
-    console.log("🎨 Attempt 1: AI Horde (Specific Active Models)...");
-    let imageBuffer = await generateWithHorde(fullPrompt, true);
+    console.log("🎨 Attempt 1: Pollinations AI (Instant Uncensored Generator)...");
+    const pollinationsPrompt = encodeURIComponent(fullPrompt);
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${pollinationsPrompt}?width=512&height=768&naughty=true&enhance=true&model=flux&safe=false`;
     
+    try {
+      const pollRes = await axios.get(pollinationsUrl, { responseType: 'arraybuffer', timeout: 15000 });
+      if (pollRes.data && pollRes.data.length > 0) {
+        console.log("✅ Success with Pollinations!");
+        await bot.sendPhoto(chatId, Buffer.from(pollRes.data), { caption });
+        return;
+      }
+    } catch (pollErr) {
+      console.error("⚠️ Pollinations Attempt 1 failed:", pollErr.message);
+    }
+    
+    // Send reassuring intermediate message so the user knows the bot is still processing
+    await bot.sendMessage(chatId, "Jaan, primary server thoda busy hai par main haar nahi maan rahi... Ek aur fast backup server try kar rahi hoon aapke liye, bas 1 minute... 😘💖🔥");
+    
+    console.log("🔄 Attempt 2: AI Horde (Specific Active Models)...");
+    let imageBuffer = await generateWithHorde(fullPrompt, true);
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
       return;
     }
     
-    // Send reassuring intermediate message so the user knows the bot is still processing
-    await bot.sendMessage(chatId, "Jaan, thoda busy queue hai par main haar nahi maan rahi... Ek aur fast backup server try kar rahi hoon aapke liye, bas 1 minute aur... 😘💖🔥");
-    
-    console.log("🔄 Attempt 2: AI Horde (Retry with Any NSFW Worker)...");
+    console.log("🔄 Attempt 3: AI Horde (Retry with Any NSFW Worker)...");
     const retryPrompt = `nude photo of Priya, 38-year-old Indian woman, gorgeous round face, warm sweet smile, dimples, dark hair parted in middle, completely naked, extremely fair complexion, milky white skin tone, snatched hourglass figure with a tiny size 0 waist, very large breasts, thick voluptuous thighs, wide heavy hips like a chubby baddie, ${visualDesc}, photorealistic, NSFW, explicit`;
     imageBuffer = await generateWithHorde(retryPrompt, false);
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
-      return;
-    }
-    
-    console.log("🚀 Attempt 3: Pollinations AI (Instant Uncensored Fallback)...");
-    await bot.sendMessage(chatId, "Jaan, main haar nahi maan rahi... Aapke liye mere special instant photo server se tasveer nikal rahi hoon, bas 3 seconds! 😏📸🔥");
-    
-    const pollinationsPrompt = encodeURIComponent(fullPrompt);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${pollinationsPrompt}?width=512&height=768&naughty=true&enhance=true&model=flux&safe=false`;
-    
-    const pollRes = await axios.get(pollinationsUrl, { responseType: 'arraybuffer', timeout: 25000 });
-    if (pollRes.data && pollRes.data.length > 0) {
-      await bot.sendPhoto(chatId, Buffer.from(pollRes.data), { caption });
       return;
     }
     
