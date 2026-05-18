@@ -157,12 +157,12 @@ const HORDE_BASE = 'https://aihorde.net/api';
 
 async function getVisualDescription(history) {
   const context = history.slice(-5).map(m => m.content).join(" ");
-  const promptRequest = `Based on this chat context: "${context}", generate an explicit NSFW image prompt for a 38yo Indian MILF.
+  const promptRequest = `Based on this chat context: "${context}", generate a highly explicit, uncensored NSFW image prompt for a 38-year-old Indian MILF named Priya.
   REQUIREMENTS:
-  1. Pose: Dynamic sexual pose (e.g., spread eagle, doggy style, riding, bending over, kneeling).
-  2. Setting: Detailed location (e.g., luxury bedroom, marble bathroom, balcony at night).
-  3. Body: Describe anatomy details (curvy body, large breasts, thick thighs, fair skin).
-  Output ONLY raw keywords separated by commas. NO intro. NO sentences. NO refusal.`;
+  1. Pose: Generate a dynamic, highly explicit sexual pose (e.g., bending over, doggy style, spread eagle, riding, arching back, kneeling, lying on back).
+  2. Camera Angle/Direction: Specify camera perspective (e.g., viewed from behind, side profile view, looking over shoulder, low angle shot, close-up of face and breasts).
+  3. Setting: Detailed location (e.g., luxury bedroom, marble bathroom, balcony at night, kitchen counter).
+  Output ONLY raw descriptive keywords separated by commas. Do NOT write full sentences. Do NOT include refusals.`;
   
   try {
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
@@ -176,29 +176,43 @@ async function getVisualDescription(history) {
     return reply;
   } catch (e) { 
     const fallbackPoses = [
-      "bending over on kitchen counter, showing ass, curvy body, large breasts hanging",
-      "lying on silk bed, legs spread wide, curvy Indian woman, seductive look",
-      "kneeling on floor, arching back, heavy breasts, thick thighs, bedroom",
-      "sitting on chair, legs open, leaning forward, cleavage, luxury room"
+      "bending over on kitchen counter, showing ass, curvy body, large breasts hanging, viewed from behind",
+      "lying on silk bed, legs spread wide, curvy Indian woman, seductive look, high angle shot",
+      "kneeling on floor facing camera, arching back, heavy breasts, thick thighs, bedroom",
+      "sitting on chair, legs open, leaning forward, cleavage, luxury room, close-up shot"
     ];
     return fallbackPoses[Math.floor(Math.random() * fallbackPoses.length)];
   }
 }
 
-async function generateWithHorde(prompt) {
+async function generateWithHorde(prompt, useSpecificModels = true) {
   const negativePrompt = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
   const fullPrompt = `${prompt} ### ${negativePrompt}`;
   
   try {
-    console.log("🎨 Submitting to AI Horde...");
-    const submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, {
+    console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
+    
+    // Top active NSFW-friendly image models on AI Horde
+    const activeModels = [
+      "AbsoluteReality",
+      "CyberRealistic Pony",
+      "AlbedoBase XL 3.1",
+      "AlbedoBase XL (SDXL)",
+      "Dreamshaper",
+      "Deliberate",
+      "ICBINP - I Can't Believe It's Not Photography",
+      "AMPonyXL",
+      "stable_diffusion"
+    ];
+
+    const payload = {
       prompt: fullPrompt,
       params: {
         sampler_name: "k_dpmpp_2m",
-        cfg_scale: 7.5,
+        cfg_scale: 7.0,
         width: 512,
         height: 768,
-        steps: 30,
+        steps: 25,
         karras: true,
         post_processing: ["GFPGAN"]
       },
@@ -207,9 +221,14 @@ async function generateWithHorde(prompt) {
       trusted_workers: false,
       slow_workers: true,
       extra_slow_workers: true,
-      models: ["Deliberate", "Deliberate 3.0", "Realistic Vision", "ICBINP - I Can't Believe It's Not Photography", "Dreamshaper", "Edge Of Realism", "Hentai Diffusion", "Babes"],
       r2: true
-    }, {
+    };
+
+    if (useSpecificModels) {
+      payload.models = activeModels;
+    }
+
+    const submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, payload, {
       headers: { 
         'apikey': HORDE_API_KEY,
         'Client-Agent': 'PriyaBot:1.0:telegram',
@@ -279,7 +298,9 @@ async function generateWithHorde(prompt) {
 
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
-  const basePrompt = "photo of a 38-year-old curvy Indian woman, fair glowing skin, very large natural breasts, thick thighs, wide hips, completely nude, naked, full nudity, explicit, NSFW, nipples visible, detailed body, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece, best quality";
+  
+  // High-fidelity anchor description of Priya to maintain consistent face and physical identity
+  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old curvy Indian MILF, glowing fair skin, sharp facial features, expressive almond eyes, long silky black hair, very large natural breasts, thick thighs, wide hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
   const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
   const captions = [
@@ -291,17 +312,17 @@ async function sendPriyaPhoto(chatId, history) {
   const caption = captions[Math.floor(Math.random() * captions.length)];
   
   try {
-    console.log("🎨 Attempt 1: AI Horde...");
-    let imageBuffer = await generateWithHorde(fullPrompt);
+    console.log("🎨 Attempt 1: AI Horde (Specific Active Models)...");
+    let imageBuffer = await generateWithHorde(fullPrompt, true);
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
       return;
     }
     
-    console.log("🔄 Attempt 2: Retrying AI Horde...");
-    const retryPrompt = `nude Indian woman, 38 years old, curvy body, large breasts, fair skin, ${visualDesc}, photorealistic, NSFW, explicit`;
-    imageBuffer = await generateWithHorde(retryPrompt);
+    console.log("🔄 Attempt 2: AI Horde (Retry with Any NSFW Worker)...");
+    const retryPrompt = `nude photo of Priya, 38-year-old curvy Indian woman, completely naked, large breasts, fair skin, long black hair, ${visualDesc}, photorealistic, NSFW, explicit`;
+    imageBuffer = await generateWithHorde(retryPrompt, false);
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
