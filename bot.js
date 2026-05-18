@@ -192,17 +192,15 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
   try {
     console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
     
-    // Top active NSFW-friendly image models on AI Horde
+    // Top active NSFW-friendly image models on AI Horde with the fastest queue times
     const activeModels = [
       "AbsoluteReality",
-      "CyberRealistic Pony",
-      "AlbedoBase XL 3.1",
-      "AlbedoBase XL (SDXL)",
-      "Dreamshaper",
       "Deliberate",
+      "Dreamshaper",
       "ICBINP - I Can't Believe It's Not Photography",
-      "AMPonyXL",
-      "stable_diffusion"
+      "stable_diffusion",
+      "Juggernaut XL",
+      "AlbedoBase XL 3.1"
     ];
 
     const payload = {
@@ -242,7 +240,7 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
     console.log(`📋 Job submitted: ${jobId}`);
     
     let attempts = 0;
-    const maxAttempts = 40; 
+    const maxAttempts = 25; // Reduced from 40 to fail/retry faster if queue is stuck 
     
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 3000));
@@ -319,6 +317,9 @@ async function sendPriyaPhoto(chatId, history) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
       return;
     }
+    
+    // Send reassuring intermediate message so the user knows the bot is still processing
+    await bot.sendMessage(chatId, "Jaan, thoda busy queue hai par main haar nahi maan rahi... Ek aur fast backup server try kar rahi hoon aapke liye, bas 1 minute aur... 😘💖🔥");
     
     console.log("🔄 Attempt 2: AI Horde (Retry with Any NSFW Worker)...");
     const retryPrompt = `nude photo of Priya, 38-year-old Indian woman, gorgeous round face, warm sweet smile, dimples, dark hair parted in middle, completely naked, extremely fair complexion, milky white skin tone, snatched hourglass figure with a tiny size 0 waist, very large breasts, thick voluptuous thighs, wide heavy hips like a chubby baddie, ${visualDesc}, photorealistic, NSFW, explicit`;
