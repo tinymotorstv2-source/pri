@@ -351,7 +351,19 @@ async function sendPriyaPhoto(chatId, history) {
       return;
     }
     
-    await bot.sendMessage(chatId, "Jaan, abhi servers busy hain... thodi der mein phir maango na photo, main bilkul ready hoon tumhare liye 😏🔥💋");
+    console.log("🚀 Attempt 3: Pollinations AI (Instant Uncensored Fallback)...");
+    await bot.sendMessage(chatId, "Jaan, main haar nahi maan rahi... Aapke liye mere special instant photo server se tasveer nikal rahi hoon, bas 3 seconds! 😏📸🔥");
+    
+    const pollinationsPrompt = encodeURIComponent(fullPrompt);
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${pollinationsPrompt}?width=512&height=768&naughty=true&enhance=true&model=flux&safe=false`;
+    
+    const pollRes = await axios.get(pollinationsUrl, { responseType: 'arraybuffer', timeout: 25000 });
+    if (pollRes.data && pollRes.data.length > 0) {
+      await bot.sendPhoto(chatId, Buffer.from(pollRes.data), { caption });
+      return;
+    }
+    
+    await bot.sendMessage(chatId, "Jaan, abhi saare servers overloaded hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋");
   } catch (e) {
     console.error("Photo send error:", e.message);
     await bot.sendMessage(chatId, "Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥");
