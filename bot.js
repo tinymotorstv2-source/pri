@@ -226,18 +226,38 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
       payload.models = activeModels;
     }
 
-    const submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, payload, {
-      headers: { 
-        'apikey': HORDE_API_KEY,
-        'Client-Agent': 'PriyaBot:1.0:telegram',
-        'Content-Type': 'application/json'
-      },
-      timeout: 15000
-    });
+    let submitRes;
+    try {
+      submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, payload, {
+        headers: { 
+          'apikey': HORDE_API_KEY,
+          'Client-Agent': 'PriyaBot:1.0:telegram',
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
+    } catch (submitErr) {
+      console.error("⚠️ AI Horde primary key submission failed:", submitErr.response?.data || submitErr.message);
+      
+      // If unauthorized (401) or forbidden (403), fallback automatically to the anonymous key so the user still gets their images!
+      if (submitErr.response?.status === 401 || submitErr.response?.status === 403 || HORDE_API_KEY === '0000000000') {
+        console.log("🔄 Retrying submission with Anonymous API key...");
+        submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, payload, {
+          headers: { 
+            'apikey': '0000000000', // Solid fallback key
+            'Client-Agent': 'PriyaBot:1.0:telegram',
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        });
+      } else {
+        throw submitErr;
+      }
+    }
     
     const jobId = submitRes.data.id;
-    if (!jobId) throw new Error("No job ID returned");
-    console.log(`📋 Job submitted: ${jobId}`);
+    if (!jobId) throw new Error("No job ID returned from AI Horde");
+    console.log(`📋 Job submitted successfully! ID: ${jobId}`);
     
     let attempts = 0;
     const maxAttempts = 25; // Reduced from 40 to fail/retry faster if queue is stuck 
@@ -262,6 +282,7 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
           });
           
           const generations = resultRes.data.generations;
+          console.log(`🎁 Generations array returned:`, JSON.stringify(generations ? generations.map(g => ({ censored: g.censored, imgType: typeof g.img, startsWithHttp: g.img?.startsWith('http') })) : null));
           if (generations && generations.length > 0) {
             const gen = generations[0];
             if (gen.censored) {
