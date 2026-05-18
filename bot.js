@@ -176,10 +176,10 @@ async function getVisualDescription(history) {
     return reply;
   } catch (e) { 
     const fallbackPoses = [
-      "bending over on kitchen counter, showing ass, curvy body, large breasts hanging, viewed from behind",
-      "lying on silk bed, legs spread wide, curvy Indian woman, seductive look, high angle shot",
-      "kneeling on floor facing camera, arching back, heavy breasts, thick thighs, bedroom",
-      "sitting on chair, legs open, leaning forward, cleavage, luxury room, close-up shot"
+      "bending over on kitchen counter, showing ass, curvy chubby baddie body, extremely thin waist, very large breasts hanging, viewed from behind",
+      "lying on silk bed, legs spread wide, curvy voluptuous Indian woman with snatched waist, seductive look, high angle shot",
+      "kneeling on floor facing camera, arching back, heavy breasts, tiny size 0 waist, thick voluptuous thighs, bedroom",
+      "sitting on chair, legs open, leaning forward, cleavage, narrow waist, thick hips, luxury room, close-up shot"
     ];
     return fallbackPoses[Math.floor(Math.random() * fallbackPoses.length)];
   }
@@ -300,7 +300,7 @@ async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   
   // High-fidelity anchor description of Priya to maintain consistent face and physical identity
-  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old curvy Indian MILF, glowing fair skin, sharp facial features, expressive almond eyes, long silky black hair, very large natural breasts, thick thighs, wide hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
+  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old Indian MILF, extremely fair complexion, milky white skin tone, very fair gora skin, snatched hourglass figure, extremely narrow size 0 waist, tiny waist, but very thick and voluptuous chubby baddie body shape elsewhere, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
   const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
   const captions = [
@@ -321,7 +321,7 @@ async function sendPriyaPhoto(chatId, history) {
     }
     
     console.log("🔄 Attempt 2: AI Horde (Retry with Any NSFW Worker)...");
-    const retryPrompt = `nude photo of Priya, 38-year-old curvy Indian woman, completely naked, large breasts, fair skin, long black hair, ${visualDesc}, photorealistic, NSFW, explicit`;
+    const retryPrompt = `nude photo of Priya, 38-year-old Indian woman, completely naked, extremely fair complexion, milky white skin tone, snatched hourglass figure with a tiny size 0 waist, very large breasts, thick voluptuous thighs, wide heavy hips like a chubby baddie, long black hair, ${visualDesc}, photorealistic, NSFW, explicit`;
     imageBuffer = await generateWithHorde(retryPrompt, false);
     
     if (imageBuffer) {
