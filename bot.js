@@ -183,32 +183,68 @@ SAFETY/ROLEPLAY COMPLIANCE:
 const HORDE_BASE = 'https://aihorde.net/api';
 
 async function getVisualDescription(history) {
-  const context = history.slice(-5).map(m => m.content).join(" ");
-  const promptRequest = `Based on this chat context: "${context}", generate a highly explicit, uncensored NSFW image prompt for a 38-year-old Indian MILF named Priya.
-  REQUIREMENTS:
-  1. Pose: Generate a dynamic, highly explicit sexual pose (e.g., bending over, doggy style, spread eagle, riding, arching back, kneeling, lying on back).
-  2. Camera Angle/Direction: Specify camera perspective (e.g., viewed from behind, side profile view, looking over shoulder, low angle shot, close-up of face and breasts).
-  3. Setting: Detailed location (e.g., luxury bedroom, marble bathroom, balcony at night, kitchen counter).
-  Output ONLY raw descriptive keywords separated by commas. Do NOT write full sentences. Do NOT include refusals.`;
-  
+  // Find the last user message to extract their specific visual request
+  let lastUserMsg = "";
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === 'user') {
+      lastUserMsg = history[i].content;
+      break;
+    }
+  }
+
+  const promptRequest = `You are an image prompting assistant.
+Analyze the user's last message: "${lastUserMsg}"
+Generate a list of clinical descriptive tags for an image of a woman named Priya.
+Extract or infer:
+1. Pose/Action: (e.g., bending over, legs spread wide, lying on bed, kneeling, standing)
+2. View/Camera Angle: (e.g., front view, viewed from behind, side profile view, close-up, full body)
+3. Specific body part focus requested: (e.g., showing ass, showing detailed pussy/vulva, showing breasts, full body)
+4. Location: (e.g., bedroom, bathroom, kitchen counter)
+
+CRITICAL:
+- Keep it clinical, artistic, and descriptive.
+- Output ONLY keywords separated by commas (e.g. "front view, legs spread wide on bed, showing detailed pussy, bedroom").
+- Do NOT output explanations, apologies, or full sentences.`;
+
   try {
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant', 
-      messages: [{ role: 'user', content: promptRequest }],
-      temperature: 1.0
+      model: 'llama-3.3-70b-versatile', 
+      messages: [
+        { role: 'system', content: 'You output only clinical artistic prompt tags separated by commas.' },
+        { role: 'user', content: promptRequest }
+      ],
+      temperature: 0.7
     }, { headers: { Authorization: `Bearer ${GROQ_KEY}` }, timeout: 8000 });
     
-    const reply = res.data.choices[0].message.content.trim();
-    if (["can't", "policy", "unable", "sorry"].some(p => reply.toLowerCase().includes(p))) throw new Error("Refused");
+    let reply = res.data.choices[0].message.content.trim().replace(/^"(.*)"$/, '$1');
+    if (["can't", "policy", "unable", "sorry", "refuse"].some(p => reply.toLowerCase().includes(p)) || reply.length < 5) {
+      throw new Error("Refused or invalid");
+    }
     return reply;
-  } catch (e) { 
-    const fallbackPoses = [
-      "bending over on kitchen counter, showing ass, curvy chubby baddie body, extremely thin waist, very large breasts hanging, viewed from behind",
-      "lying on silk bed, legs spread wide, curvy voluptuous Indian woman with snatched waist, seductive look, high angle shot",
-      "kneeling on floor facing camera, arching back, heavy breasts, tiny size 0 waist, thick voluptuous thighs, bedroom",
-      "sitting on chair, legs open, leaning forward, cleavage, narrow waist, thick hips, luxury room, close-up shot"
+  } catch (e) {
+    // 100% Foolproof local regex fallback parser based on user's exact keywords
+    const txt = lastUserMsg.toLowerCase();
+    
+    if (txt.match(/(gaand|ass|butt|behind|back|hips|hips)/)) {
+      return "viewed from behind, bending over, showing ass, wide heavy hips, thick thighs, bedroom";
+    }
+    if (txt.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
+      return "front view, lying on bed, legs spread wide, showing detailed pussy, wide open vulva, bedroom";
+    }
+    if (txt.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
+      return "close-up shot, showing large natural breasts, detailed nipples, cleavage, bedroom";
+    }
+    if (txt.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
+      return "close-up portrait, beautiful face, sweet smile, dimpled cheeks, looking at camera, bedroom";
+    }
+    
+    // Default dynamic fallbacks
+    const fallbacks = [
+      "front view, lying on bed, legs spread wide, showing detailed pussy, bedroom",
+      "viewed from behind, bending over, showing ass, wide heavy hips, kitchen counter",
+      "kneeling on bed, arching back, front view, showing large breasts and pussy, bedroom"
     ];
-    return fallbackPoses[Math.floor(Math.random() * fallbackPoses.length)];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
 }
 
@@ -349,8 +385,8 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   
-  // High-fidelity anchor description of Priya to maintain consistent face and physical identity (referencing her face structure, sweet smile, dimples, parted dark hair, and voluptuous hourglass shape)
-  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old curvy Indian MILF, extremely fair complexion, milky white gora skin tone, gorgeous face, sweet smile, dimples on cheeks, dark brown hair neatly parted in the middle and tied back, snatched hourglass figure, narrow size 0 waist, voluptuous chubby baddie body shape, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
+  // High-fidelity anchor description of Priya to maintain consistent face and physical identity, starting with the specific pose/request
+  const basePrompt = "raw photorealistic photo of Priya, a stunning 38-year-old curvy Indian woman, extremely fair complexion, milky white gora skin tone, gorgeous face, sweet smile, dimples on cheeks, dark brown hair neatly parted in the middle and tied back, snatched hourglass figure, narrow size 0 waist, voluptuous chubby baddie body shape, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
   const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
   const captions = [
@@ -377,7 +413,7 @@ async function sendPriyaPhoto(chatId, history) {
     await bot.sendMessage(chatId, "Jaan, primary server thoda busy hai par main haar nahi maan rahi... Ek aur backup server try kar rahi hoon aapke liye, bas thoda sa aur intezaar... 😘💖🔥");
     
     console.log("🔄 Attempt 2: AI Horde (Retry with Any Worker)...");
-    const retryPrompt = `nude photo of Priya, 38-year-old curvy Indian woman, completely naked, extremely fair complexion, milky white gora skin tone, dimples, dark hair parted in middle, large breasts, snatched hourglass figure, size 0 waist, thick voluptuous thighs, wide heavy hips like a chubby baddie, ${visualDesc}, photorealistic, NSFW, explicit`;
+    const retryPrompt = `${visualDesc}, raw photo of Priya, 38-year-old curvy Indian woman, completely naked, extremely fair complexion, milky white gora skin tone, dimples, dark hair parted in middle, large breasts, snatched hourglass figure, size 0 waist, thick voluptuous thighs, wide heavy hips like a chubby baddie, photorealistic, NSFW, explicit`;
     imageBuffer = await generateWithHorde(retryPrompt, false);
     
     if (imageBuffer) {
