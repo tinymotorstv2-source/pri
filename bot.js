@@ -225,24 +225,24 @@ CRITICAL:
     // 100% Foolproof local regex fallback parser based on user's exact keywords
     const txt = lastUserMsg.toLowerCase();
     
-    if (txt.match(/(gaand|ass|butt|behind|back|hips|hips)/)) {
-      return "viewed from behind, bending over, showing ass, wide heavy hips, thick thighs, bedroom";
+    if (txt.match(/(gaand|ass|butt|behind|back|hips)/)) {
+      return "viewed from behind, bending over, showing ass, wide heavy hips, thick voluptuous thighs, completely naked, bedroom";
     }
     if (txt.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
-      return "front view, lying on bed, legs spread wide, showing detailed pussy, wide open vulva, bedroom";
+      return "front view, lying on bed, legs spread wide, completely naked, showing nude body, bedroom";
     }
     if (txt.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
-      return "close-up shot, showing large natural breasts, detailed nipples, cleavage, bedroom";
+      return "close-up shot, showing large natural breasts, detailed nipples, cleavage, completely naked, bedroom";
     }
     if (txt.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
-      return "close-up portrait, beautiful face, sweet smile, dimpled cheeks, looking at camera, bedroom";
+      return "close-up portrait, beautiful round face, sweet smile, dimpled cheeks, looking at camera, bedroom";
     }
     
     // Default dynamic fallbacks
     const fallbacks = [
-      "front view, lying on bed, legs spread wide, showing detailed pussy, bedroom",
-      "viewed from behind, bending over, showing ass, wide heavy hips, kitchen counter",
-      "kneeling on bed, arching back, front view, showing large breasts and pussy, bedroom"
+      "front view, lying on bed, legs spread wide, completely naked, showing nude body, bedroom",
+      "viewed from behind, bending over, showing ass, wide heavy hips, completely naked, kitchen counter",
+      "kneeling on bed, arching back, front view, showing large breasts, completely naked, bedroom"
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
@@ -255,19 +255,15 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
   try {
     console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
     
-    // Top active realistic and NSFW-friendly models on AI Horde (including SDXL, Pony and SD 1.5 to maximize worker coverage and speed)
+    // Top active realistic and NSFW-friendly SD 1.5 models on AI Horde (excluding SDXL/Pony to ensure premium quality at 512x768)
     const activeModels = [
-      "AbsoluteReality",
-      "CyberRealistic Pony",
-      "AlbedoBase XL 3.1",
-      "AlbedoBase XL (SDXL)",
-      "Dreamshaper",
-      "Deliberate",
-      "ICBINP - I Can't Believe It's Not Photography",
-      "AMPonyXL",
-      "stable_diffusion",
       "Realistic Vision",
-      "Photon"
+      "Photon",
+      "AbsoluteReality",
+      "ICBINP - I Can't Believe It's Not Photography",
+      "stable_diffusion",
+      "Deliberate",
+      "Dreamshaper"
     ];
 
     const payload = {
@@ -386,7 +382,7 @@ async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
   
   // High-fidelity anchor description of Priya to maintain consistent face and physical identity, starting with the specific pose/request
-  const basePrompt = "raw photorealistic photo of Priya, a stunning 38-year-old curvy Indian woman, extremely fair complexion, milky white gora skin tone, gorgeous face, sweet smile, dimples on cheeks, dark brown hair neatly parted in the middle and tied back, snatched hourglass figure, narrow size 0 waist, voluptuous chubby baddie body shape, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
+  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old Indian MILF, gorgeous round face, warm sweet smile, soft and beautiful facial features, dimples on cheeks, large expressive almond dark brown eyes, thin elegant eyebrows, small cute nose, dark brown hair neatly parted in the middle and tied back, extremely fair complexion, milky white skin tone, very fair gora skin, snatched hourglass figure, extremely narrow size 0 waist, tiny waist, but very thick and voluptuous chubby baddie body shape elsewhere, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
   const fullPrompt = `${visualDesc}, ${basePrompt}`;
   
   const captions = [
@@ -413,7 +409,7 @@ async function sendPriyaPhoto(chatId, history) {
     await bot.sendMessage(chatId, "Jaan, primary server thoda busy hai par main haar nahi maan rahi... Ek aur backup server try kar rahi hoon aapke liye, bas thoda sa aur intezaar... 😘💖🔥");
     
     console.log("🔄 Attempt 2: AI Horde (Retry with Any Worker)...");
-    const retryPrompt = `${visualDesc}, raw photo of Priya, 38-year-old curvy Indian woman, completely naked, extremely fair complexion, milky white gora skin tone, dimples, dark hair parted in middle, large breasts, snatched hourglass figure, size 0 waist, thick voluptuous thighs, wide heavy hips like a chubby baddie, photorealistic, NSFW, explicit`;
+    const retryPrompt = `${visualDesc}, nude photo of Priya, 38-year-old Indian woman, gorgeous round face, warm sweet smile, dimples, dark hair parted in middle, completely naked, extremely fair complexion, milky white skin tone, snatched hourglass figure with a tiny size 0 waist, very large breasts, thick voluptuous thighs, wide heavy hips like a chubby baddie, photorealistic, NSFW, explicit`;
     imageBuffer = await generateWithHorde(retryPrompt, false);
     
     if (imageBuffer) {
