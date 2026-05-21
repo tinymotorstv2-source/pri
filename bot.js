@@ -283,15 +283,21 @@ async function generateWithHorde(prompt, negativePrompt, useSpecificModels = tru
   try {
     console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
     
-    // Top active realistic and NSFW-friendly SD 1.5 models on AI Horde (excluding SDXL/Pony to ensure premium quality at 512x768)
+    // Top active realistic and NSFW-friendly models on AI Horde (including SDXL, Pony and SD 1.5 to maximize quality and coverage)
     const activeModels = [
+      "AbsoluteReality",
+      "CyberRealistic Pony",
+      "AlbedoBase XL 3.1",
+      "AlbedoBase XL (SDXL)",
+      "Dreamshaper",
+      "Deliberate",
+      "ICBINP - I Can't Believe It's Not Photography",
+      "AMPonyXL",
+      "stable_diffusion",
       "Realistic Vision",
       "Photon",
-      "AbsoluteReality",
-      "ICBINP - I Can't Believe It's Not Photography",
-      "stable_diffusion",
-      "Deliberate",
-      "Dreamshaper"
+      "Juggernaut XL",
+      "URPM"
     ];
 
     const payload = {
