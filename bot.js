@@ -192,13 +192,20 @@ async function getVisualDescription(history) {
     }
   }
 
+  // Get the last 6 messages of recent chat flow for context
+  const recentHistory = history.slice(-6).map(h => `${h.role === 'user' ? 'User' : 'Priya'}: ${h.content}`).join("\n");
+
   const promptRequest = `You are an image prompting assistant.
-Analyze the user's last message: "${lastUserMsg}"
+Analyze the recent conversation flow to understand what the user is asking for:
+${recentHistory}
+
+Analyze the user's explicit request: "${lastUserMsg}"
+
 Generate a list of clinical descriptive tags for an image of a woman named Priya.
-Extract or infer:
+Extract or infer based on the context:
 1. Pose/Action: (e.g., bending over, legs spread wide, lying on bed, kneeling, standing)
 2. View/Camera Angle: (e.g., front view, viewed from behind, side profile view, close-up, full body)
-3. Specific body part focus requested: (e.g., showing ass, showing detailed pussy/vulva, showing breasts, full body)
+3. Specific body part focus requested: (e.g., showing ass, showing detailed pussy/vulva, showing breasts, face portrait, full body)
 4. Location: (e.g., bedroom, bathroom, kitchen counter)
 
 CRITICAL:
@@ -222,19 +229,19 @@ CRITICAL:
     }
     return reply;
   } catch (e) {
-    // 100% Foolproof local regex fallback parser based on user's exact keywords
-    const txt = lastUserMsg.toLowerCase();
+    // 100% Foolproof local regex fallback parser based on recent user/assistant keywords
+    const recentTxts = history.slice(-4).map(h => h.content.toLowerCase()).join(" ");
     
-    if (txt.match(/(gaand|ass|butt|behind|back|hips)/)) {
+    if (recentTxts.match(/(gaand|ass|butt|behind|back|hips)/)) {
       return "viewed from behind, bending over, showing ass, wide heavy hips, thick voluptuous thighs, completely naked, bedroom";
     }
-    if (txt.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
+    if (recentTxts.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
       return "front view, lying on bed, legs spread wide, completely naked, showing nude body, bedroom";
     }
-    if (txt.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
+    if (recentTxts.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
       return "close-up shot, showing large natural breasts, detailed nipples, cleavage, completely naked, bedroom";
     }
-    if (txt.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
+    if (recentTxts.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
       return "close-up portrait, beautiful round face, sweet smile, dimpled cheeks, looking at camera, bedroom";
     }
     
@@ -248,9 +255,30 @@ CRITICAL:
   }
 }
 
-async function generateWithHorde(prompt, useSpecificModels = true) {
-  const negativePrompt = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
-  const fullPrompt = `${prompt} ### ${negativePrompt}`;
+function getFocusCategory(history, tags) {
+  // Combine last 4 messages of history content and the generated tags
+  const recentTxts = history.slice(-4).map(h => h.content.toLowerCase()).join(" ");
+  const combined = (recentTxts + " " + (tags || "")).toLowerCase();
+  
+  if (combined.match(/(gaand|ass|butt|behind|back|hips|buttocks)/)) {
+    return 'ass';
+  }
+  if (combined.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
+    return 'pussy';
+  }
+  if (combined.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
+    return 'breasts';
+  }
+  if (combined.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
+    return 'face';
+  }
+  return 'default';
+}
+
+async function generateWithHorde(prompt, negativePrompt, useSpecificModels = true) {
+  const defaultNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
+  const finalNegative = negativePrompt || defaultNegative;
+  const fullPrompt = `${prompt} ### ${finalNegative}`;
   
   try {
     console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
@@ -380,11 +408,40 @@ async function generateWithHorde(prompt, useSpecificModels = true) {
 
 async function sendPriyaPhoto(chatId, history) {
   const visualDesc = await getVisualDescription(history);
-  
-  // High-fidelity anchor description of Priya to maintain consistent face and physical identity, starting with the specific pose/request
-  const basePrompt = "highly detailed photorealistic portrait of Priya, a stunning 38-year-old Indian MILF, gorgeous round face, warm sweet smile, soft and beautiful facial features, dimples on cheeks, large expressive almond dark brown eyes, thin elegant eyebrows, small cute nose, dark brown hair neatly parted in the middle and tied back, extremely fair complexion, milky white skin tone, very fair gora skin, snatched hourglass figure, extremely narrow size 0 waist, tiny waist, but very thick and voluptuous chubby baddie body shape elsewhere, very large natural breasts, thick thighs, wide heavy hips, completely naked, full body nudity, raw skin texture, explicit, NSFW, nipples visible, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
-  const fullPrompt = `${visualDesc}, ${basePrompt}`;
-  
+  const category = getFocusCategory(history, visualDesc);
+  console.log(`📸 Image request category determined: ${category}`);
+
+  let prompt = "";
+  let negPrompt = "";
+
+  // Common identity keywords for Priya to maintain consistency across all images
+  const priyaIdentity = "Priya, a stunning 38-year-old Indian woman, extremely fair complexion, milky white skin tone, very fair gora skin, dark brown hair neatly parted in the middle and tied back";
+
+  // Base negative prompt keywords to prevent common SD 1.5 distortions
+  const baseNSFWNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated";
+
+  if (category === 'face') {
+    // Face portrait: strictly close up, no hands or body parts to avoid broken limbs
+    prompt = `highly detailed photorealistic close-up portrait of ${priyaIdentity}, gorgeous round face, warm sweet smile, dimples on cheeks, large expressive almond dark brown eyes, thin elegant eyebrows, small cute nose, looking directly at camera, bare shoulders, clear skin, cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
+    negPrompt = `${baseNSFWNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
+  } else if (category === 'breasts') {
+    // Breasts focus: upper body medium shot
+    prompt = `${visualDesc}, highly detailed photorealistic medium shot of ${priyaIdentity}, gorgeous round face, sweet smile, dimples on cheeks, looking at camera, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, snatched hourglass figure, narrow waist, bedroom, warm lighting, cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
+    negPrompt = `${baseNSFWNegative}, hands near face, legs, feet`;
+  } else if (category === 'ass') {
+    // Ass focus: back shot with head turned back over shoulder to show face and ass without broken anatomy
+    prompt = `${visualDesc}, highly detailed photorealistic medium full shot of ${priyaIdentity} from behind, bending over, head turned looking back over shoulder towards camera, gorgeous round face, sweet smile, dimples on cheeks, showing bare ass, round voluptuous butt, wide heavy hips, thick voluptuous thighs, completely naked, bedroom, soft lighting, cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
+    negPrompt = `${baseNSFWNegative}, front view, face facing forward, front torso`;
+  } else if (category === 'pussy') {
+    // Pussy/Spread focus: full body lying on bed
+    prompt = `${visualDesc}, highly detailed photorealistic full body shot of ${priyaIdentity}, lying on bed, legs spread wide, completely naked, showing nude body, gorgeous round face, looking at camera, sweet smile, dimples on cheeks, snatched hourglass figure, narrow waist, very large breasts, thick voluptuous thighs, wide heavy hips, bedroom, warm cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
+    negPrompt = baseNSFWNegative;
+  } else {
+    // Default full body nude/sexy
+    prompt = `${visualDesc}, highly detailed photorealistic full body shot of ${priyaIdentity}, standing, snatched hourglass figure, narrow waist, tiny waist, very large natural breasts, thick voluptuous thighs, wide heavy hips, completely naked, full body nudity, gorgeous round face, warm sweet smile, dimples on cheeks, looking at camera, bedroom, cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
+    negPrompt = baseNSFWNegative;
+  }
+
   const captions = [
     "Lo jaan, ye lo meri asli tasveer... bilkul nangi, sirf tumhare liye. 🔞🔥💦",
     "Dekho jaan kitni besharam ho gayi main... sab kuch dikha rahi hoon 😏🔥💦",
@@ -397,8 +454,8 @@ async function sendPriyaPhoto(chatId, history) {
     // Send immediate warm message to acknowledge their request
     await bot.sendMessage(chatId, "Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞");
     
-    console.log("🎨 Attempt 1: AI Horde (Fastest Photorealistic Models List)...");
-    let imageBuffer = await generateWithHorde(fullPrompt, true);
+    console.log(`🎨 Attempt 1: AI Horde (Fastest Photorealistic Models)...`);
+    let imageBuffer = await generateWithHorde(prompt, negPrompt, true);
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
@@ -409,8 +466,19 @@ async function sendPriyaPhoto(chatId, history) {
     await bot.sendMessage(chatId, "Jaan, primary server thoda busy hai par main haar nahi maan rahi... Ek aur backup server try kar rahi hoon aapke liye, bas thoda sa aur intezaar... 😘💖🔥");
     
     console.log("🔄 Attempt 2: AI Horde (Retry with Any Worker)...");
-    const retryPrompt = `${visualDesc}, nude photo of Priya, 38-year-old Indian woman, gorgeous round face, warm sweet smile, dimples, dark hair parted in middle, completely naked, extremely fair complexion, milky white skin tone, snatched hourglass figure with a tiny size 0 waist, very large breasts, thick voluptuous thighs, wide heavy hips like a chubby baddie, photorealistic, NSFW, explicit`;
-    imageBuffer = await generateWithHorde(retryPrompt, false);
+    // Simplify for fallback retry
+    let retryPrompt = "";
+    if (category === 'face') {
+      retryPrompt = `close-up portrait photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, looking at camera, bare shoulders, photorealistic, 4k`;
+    } else if (category === 'ass') {
+      retryPrompt = `photo of ${priyaIdentity} from behind, bending over, looking back over shoulder smiling, showing bare ass, completely naked, voluptuous, photorealistic, NSFW, explicit`;
+    } else if (category === 'breasts') {
+      retryPrompt = `medium shot of ${priyaIdentity}, looking at camera smiling, showing large breasts, completely naked, photorealistic, NSFW, explicit`;
+    } else {
+      retryPrompt = `nude photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
+    }
+
+    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, false);
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
