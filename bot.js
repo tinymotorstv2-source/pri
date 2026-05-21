@@ -275,50 +275,73 @@ function getFocusCategory(history, tags) {
   return 'default';
 }
 
-async function generateWithHorde(prompt, negativePrompt, useSpecificModels = true) {
-  const defaultNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, pants, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
+async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl' }) {
+  const defaultNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
   const finalNegative = negativePrompt || defaultNegative;
-  const fullPrompt = `${prompt} ### ${finalNegative}`;
+  
+  // Pony models require special score tags for best quality
+  let finalPrompt = prompt;
+  if (config.type === 'sdxl') {
+     finalPrompt = `score_9, score_8_up, score_7_up, score_6_up, source_anime, ${prompt}`;
+  }
+  const fullPrompt = `${finalPrompt} ### ${finalNegative}`;
   
   try {
-    console.log(`🎨 Submitting to AI Horde (Specific Models: ${useSpecificModels})...`);
+    console.log(`🎨 Submitting to AI Horde (Type: ${config.type})...`);
     
-    // Top active realistic and NSFW-friendly models on AI Horde (including SDXL, Pony and SD 1.5 to maximize quality and coverage)
-    const activeModels = [
-      "URPM",
-      "AbsoluteReality",
-      "Realistic Vision",
-      "EpicRealism",
-      "majicMIX realistic",
-      "CyberRealistic",
-      "Photon",
-      "ICBINP - I Can't Believe It's Not Photography",
-      "Dreamshaper",
-      "Deliberate"
-    ];
+    let activeModels = [];
+    let width = 512;
+    let height = 768;
+    
+    if (config.type === 'sdxl') {
+      activeModels = [
+        "AlbedoBase XL 3.1",
+        "AlbedoBase XL (SDXL)",
+        "CyberRealistic Pony",
+        "AMPonyXL",
+        "Juggernaut XL",
+        "Pony Diffusion XL",
+        "WAI-NSFW-illustrious-SDXL"
+      ];
+      width = 768;
+      height = 1024;
+    } else {
+      activeModels = [
+        "URPM",
+        "AbsoluteReality",
+        "Realistic Vision",
+        "EpicRealism",
+        "majicMIX realistic",
+        "CyberRealistic",
+        "Photon",
+        "ICBINP - I Can't Believe It's Not Photography",
+        "Dreamshaper",
+        "Deliberate",
+        "NeverEnding Dream"
+      ];
+      width = 512;
+      height = 768;
+    }
 
     const payload = {
       prompt: fullPrompt,
       params: {
         sampler_name: "k_dpmpp_2m",
         cfg_scale: 7.0,
-        width: 512,
-        height: 768,
-        steps: 30, // Increased steps for better details
+        width: width,
+        height: height,
+        steps: 25, // Lowered back to 25 to improve queue priority
         karras: true,
-        post_processing: ["GFPGAN"]
+        post_processing: [] // Removed GFPGAN as it sometimes slows down Horde workers
       },
+      models: activeModels,
       nsfw: true,
       censor_nsfw: false,
-      trusted_workers: false, // Wait, maybe change to true for better quality if it doesn't slow down too much. Let's keep false but we removed the SDXL models so it should be fine.
+      trusted_workers: false,
       slow_workers: true,
       extra_slow_workers: true,
       r2: true
     };
-
-    if (useSpecificModels) {
-      payload.models = activeModels;
-    }
 
     let submitRes;
     try {
@@ -457,8 +480,8 @@ async function sendPriyaPhoto(chatId, history) {
     // Send immediate warm message to acknowledge their request
     await bot.sendMessage(chatId, "Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞");
     
-    console.log(`🎨 Attempt 1: AI Horde (Fastest Photorealistic Models)...`);
-    let imageBuffer = await generateWithHorde(prompt, negPrompt, true);
+    console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
+    let imageBuffer = await generateWithHorde(prompt, negPrompt, { type: 'sdxl' });
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
@@ -481,7 +504,7 @@ async function sendPriyaPhoto(chatId, history) {
       retryPrompt = `nude photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, true); // Keep specific models to avoid anime/garbage workers
+    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, { type: 'sd15' }); // Fast low-res fallback
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
