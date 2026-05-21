@@ -285,19 +285,16 @@ async function generateWithHorde(prompt, negativePrompt, useSpecificModels = tru
     
     // Top active realistic and NSFW-friendly models on AI Horde (including SDXL, Pony and SD 1.5 to maximize quality and coverage)
     const activeModels = [
+      "URPM",
       "AbsoluteReality",
-      "CyberRealistic Pony",
-      "AlbedoBase XL 3.1",
-      "AlbedoBase XL (SDXL)",
-      "Dreamshaper",
-      "Deliberate",
-      "ICBINP - I Can't Believe It's Not Photography",
-      "AMPonyXL",
-      "stable_diffusion",
       "Realistic Vision",
+      "EpicRealism",
+      "majicMIX realistic",
+      "CyberRealistic",
       "Photon",
-      "Juggernaut XL",
-      "URPM"
+      "ICBINP - I Can't Believe It's Not Photography",
+      "Dreamshaper",
+      "Deliberate"
     ];
 
     const payload = {
@@ -307,13 +304,13 @@ async function generateWithHorde(prompt, negativePrompt, useSpecificModels = tru
         cfg_scale: 7.0,
         width: 512,
         height: 768,
-        steps: 25,
+        steps: 30, // Increased steps for better details
         karras: true,
         post_processing: ["GFPGAN"]
       },
       nsfw: true,
       censor_nsfw: false,
-      trusted_workers: false,
+      trusted_workers: false, // Wait, maybe change to true for better quality if it doesn't slow down too much. Let's keep false but we removed the SDXL models so it should be fine.
       slow_workers: true,
       extra_slow_workers: true,
       r2: true
@@ -424,7 +421,7 @@ async function sendPriyaPhoto(chatId, history) {
   const priyaIdentity = "Priya, a stunning 38-year-old Indian woman, extremely fair complexion, milky white skin tone, very fair gora skin, dark brown hair neatly parted in the middle and tied back";
 
   // Base negative prompt keywords to prevent common SD 1.5 distortions
-  const baseNSFWNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated";
+  const baseNSFWNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck";
 
   if (category === 'face') {
     // Face portrait: strictly close up, no hands or body parts to avoid broken limbs
@@ -484,7 +481,7 @@ async function sendPriyaPhoto(chatId, history) {
       retryPrompt = `nude photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, false);
+    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, true); // Keep specific models to avoid anime/garbage workers
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, { caption });
