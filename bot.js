@@ -235,8 +235,8 @@ CRITICAL:
     if (recentTxts.match(/(gaand|ass|butt|behind|back|hips|pichwada|bund|bum)/)) {
       return "viewed from behind, bending over, showing ass, wide heavy hips, thick voluptuous thighs, completely naked, bedroom";
     }
-    if (recentTxts.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo)/)) {
-      return "front view, lying on bed, legs spread wide, completely naked, showing nude body, bedroom";
+    if (recentTxts.match(/(chut|pussy|psy|pusi|phudi|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo|chudai)/)) {
+      return "close-up shot, lying on bed, legs spread wide open, completely naked, explicitly showing detailed pussy, crotch focus, bedroom";
     }
     if (recentTxts.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)/)) {
       return "close-up shot, showing large natural breasts, detailed nipples, cleavage, completely naked, bedroom";
@@ -263,7 +263,7 @@ function getFocusCategory(history, tags) {
   if (combined.match(/(gaand|ass|butt|behind|back|hips|buttocks|pichwada|bund|bum)/)) {
     return 'ass';
   }
-  if (combined.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo)/)) {
+  if (combined.match(/(chut|pussy|psy|pusi|phudi|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo|chudai)/)) {
     return 'pussy';
   }
   if (combined.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)/)) {
@@ -459,9 +459,9 @@ async function sendPriyaPhoto(chatId, history) {
     prompt = `${visualDesc}, highly detailed photorealistic medium full shot of ${priyaIdentity} from behind, bending over, head turned looking back over shoulder towards camera, gorgeous round face, sweet smile, dimples on cheeks, showing bare ass, round voluptuous butt, wide heavy hips, thick voluptuous thighs, completely naked, bedroom, soft lighting, cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
     negPrompt = `${baseNSFWNegative}, front view, face facing forward, front torso`;
   } else if (category === 'pussy') {
-    // Pussy/Spread focus: full body lying on bed
-    prompt = `${visualDesc}, highly detailed photorealistic full body shot of ${priyaIdentity}, lying on bed, legs spread wide, completely naked, showing nude body, gorgeous round face, looking at camera, sweet smile, dimples on cheeks, snatched hourglass figure, narrow waist, very large breasts, thick voluptuous thighs, wide heavy hips, bedroom, warm cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
-    negPrompt = baseNSFWNegative;
+    // Pussy/Spread focus: explicit crotch close-up
+    prompt = `${visualDesc}, highly detailed photorealistic close-up shot of crotch, ${priyaIdentity}, lying on bed, legs spread wide open, explicitly showing detailed pussy, labia, completely naked, thick voluptuous thighs, bedroom, warm cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
+    negPrompt = `${baseNSFWNegative}, face, head, upper body`;
   } else {
     // Default full body nude/sexy
     prompt = `${visualDesc}, highly detailed photorealistic full body shot of ${priyaIdentity}, standing, snatched hourglass figure, narrow waist, tiny waist, very large natural breasts, thick voluptuous thighs, wide heavy hips, completely naked, full body nudity, gorgeous round face, warm sweet smile, dimples on cheeks, looking at camera, bedroom, cinematic lighting, sharp focus, 4k, masterpiece, best quality`;
