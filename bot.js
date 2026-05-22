@@ -232,16 +232,16 @@ CRITICAL:
     // 100% Foolproof local regex fallback parser based on recent user/assistant keywords
     const recentTxts = history.slice(-4).map(h => h.content.toLowerCase()).join(" ");
     
-    if (recentTxts.match(/(gaand|ass|butt|behind|back|hips)/)) {
+    if (recentTxts.match(/(gaand|ass|butt|behind|back|hips|pichwada|bund|bum)/)) {
       return "viewed from behind, bending over, showing ass, wide heavy hips, thick voluptuous thighs, completely naked, bedroom";
     }
-    if (recentTxts.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
+    if (recentTxts.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo)/)) {
       return "front view, lying on bed, legs spread wide, completely naked, showing nude body, bedroom";
     }
-    if (recentTxts.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
+    if (recentTxts.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)/)) {
       return "close-up shot, showing large natural breasts, detailed nipples, cleavage, completely naked, bedroom";
     }
-    if (recentTxts.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
+    if (recentTxts.match(/(face|shakal|face portrait|portrait|smile|cheeks|muh|chehra)/)) {
       return "close-up portrait, beautiful round face, sweet smile, dimpled cheeks, looking at camera, bedroom";
     }
     
@@ -260,16 +260,16 @@ function getFocusCategory(history, tags) {
   const recentTxts = history.slice(-4).map(h => h.content.toLowerCase()).join(" ");
   const combined = (recentTxts + " " + (tags || "")).toLowerCase();
   
-  if (combined.match(/(gaand|ass|butt|behind|back|hips|buttocks)/)) {
+  if (combined.match(/(gaand|ass|butt|behind|back|hips|buttocks|pichwada|bund|bum)/)) {
     return 'ass';
   }
-  if (combined.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon)/)) {
+  if (combined.match(/(chut|pussy|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo)/)) {
     return 'pussy';
   }
-  if (combined.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe)/)) {
+  if (combined.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)/)) {
     return 'breasts';
   }
-  if (combined.match(/(face|shakal|face portrait|portrait|smile|cheeks)/)) {
+  if (combined.match(/(face|shakal|face portrait|portrait|smile|cheeks|muh|chehra)/)) {
     return 'face';
   }
   return 'default';
@@ -497,11 +497,11 @@ async function sendPriyaPhoto(chatId, history) {
     if (category === 'face') {
       retryPrompt = `close-up portrait photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, looking at camera, bare shoulders, photorealistic, 4k`;
     } else if (category === 'ass') {
-      retryPrompt = `photo of ${priyaIdentity} from behind, bending over, looking back over shoulder smiling, showing bare ass, completely naked, voluptuous, photorealistic, NSFW, explicit`;
+      retryPrompt = `${visualDesc}, photo of ${priyaIdentity} from behind, bending over, looking back over shoulder smiling, showing bare ass, completely naked, voluptuous, photorealistic, NSFW, explicit`;
     } else if (category === 'breasts') {
-      retryPrompt = `medium shot of ${priyaIdentity}, looking at camera smiling, showing large breasts, completely naked, photorealistic, NSFW, explicit`;
+      retryPrompt = `${visualDesc}, medium shot of ${priyaIdentity}, looking at camera smiling, showing large breasts, completely naked, photorealistic, NSFW, explicit`;
     } else {
-      retryPrompt = `nude photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
+      retryPrompt = `${visualDesc}, nude photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
     imageBuffer = await generateWithHorde(retryPrompt, negPrompt, { type: 'sd15' }); // Fast low-res fallback
