@@ -458,7 +458,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     console.log(`📋 Job submitted successfully! ID: ${jobId}`);
     
     let attempts = 0;
-    const maxAttempts = 45; // Increased to 45 (135 seconds max wait time) to give workers enough time to complete without premature timeouts
+    const maxAttempts = config.maxAttempts || 45;
     
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 3000));
@@ -472,6 +472,12 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
+        
+        // If wait time is too high on any check, abort immediately to allow fast fallback
+        if (status.wait_time > 180) {
+          console.log(`⚠️ Queue wait time is too high (${status.wait_time}s). Aborting attempt to allow fallback...`);
+          return null;
+        }
         
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
@@ -588,7 +594,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     await bot.sendMessage(chatId, `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`);
     
     console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
-    let imageBuffer = await generateWithHorde(prompt, negPrompt, { type: 'sdxl' });
+    let imageBuffer = await generateWithHorde(prompt, negPrompt, { type: 'sdxl', maxAttempts: 15 });
     
     // Setup inline buttons for interactive photo controls
     const opts = {
@@ -629,7 +635,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       retryPrompt = `${visualDesc}, nude photo of ${identityTags}, gorgeous face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, { type: 'sd15' });
+    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, { type: 'sd15', maxAttempts: 25 });
     
     if (imageBuffer) {
       await bot.sendPhoto(chatId, imageBuffer, opts);
