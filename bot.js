@@ -428,7 +428,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
           'Client-Agent': 'PriyaBot:1.0:telegram',
           'Content-Type': 'application/json'
         },
-        timeout: 15000
+        timeout: 35000
       });
     } catch (submitErr) {
       console.error("⚠️ AI Horde primary key submission failed:", submitErr.response?.data || submitErr.message);
@@ -442,7 +442,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
             'Client-Agent': 'PriyaBot:1.0:telegram',
             'Content-Type': 'application/json'
           },
-          timeout: 15000
+          timeout: 35000
         });
       } else {
         throw submitErr;
@@ -478,7 +478,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
             headers: { 'Client-Agent': 'PriyaBot:1.0:telegram' },
-            timeout: 15000
+            timeout: 25000
           });
           
           const generations = resultRes.data.generations;
@@ -491,7 +491,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
             }
             
             if (gen.img.startsWith('http')) {
-              const imgRes = await axios.get(gen.img, { responseType: 'arraybuffer', timeout: 15000 });
+              const imgRes = await axios.get(gen.img, { responseType: 'arraybuffer', timeout: 25000 });
               return Buffer.from(imgRes.data);
             } else {
               return Buffer.from(gen.img, 'base64');
