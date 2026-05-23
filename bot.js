@@ -439,77 +439,203 @@ function getFocusCategory(history, tags) {
   return 'default';
 }
 
-async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl' }) {
-  const defaultNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly";
-  const finalNegative = negativePrompt || defaultNegative;
-  
-  // Pony models require special score tags for best quality
-  let finalPrompt = prompt;
-  if (config.type === 'sdxl') {
-     finalPrompt = `score_9, score_8_up, score_7_up, score_6_up, ${prompt}`;
+// ─── MODEL PREFERENCES & HELPERS ─────────────────────────────────────────────
+const PREFERRED_MODELS = {
+  pony: [
+    "CyberRealistic Pony",
+    "WAI-ANI-NSFW-PONYXL",
+    "AMPonyXL",
+    "Pony Diffusion XL",
+    "BlenderMix Pony"
+  ],
+  illustrious: [
+    "WAI-NSFW-illustrious-SDXL"
+  ],
+  sdxl: [
+    "AlbedoBase XL (SDXL)",
+    "AlbedoBase XL 3.1",
+    "Juggernaut XL",
+    "Hassaku XL",
+    "Nova Anime XL"
+  ],
+  sd15: [
+    "ICBINP - I Can't Believe It's Not Photography",
+    "AbsoluteReality",
+    "NeverEnding Dream",
+    "NatViS",
+    "Deliberate",
+    "Dreamshaper"
+  ]
+};
+
+function getModelType(modelName) {
+  const nameLower = modelName.toLowerCase();
+  if (nameLower.includes('pony') || nameLower.includes('ponyxl')) {
+    return 'pony';
   }
-  const fullPrompt = `${finalPrompt} ### ${finalNegative}`;
-  
+  if (nameLower.includes('illustrious')) {
+    return 'illustrious';
+  }
+  if (nameLower.includes('xl') || nameLower.includes('sdxl') || nameLower.includes('hassaku')) {
+    return 'sdxl';
+  }
+  return 'sd15';
+}
+
+async function getBestHordeModels() {
   try {
-    console.log(`🎨 Submitting to AI Horde (Type: ${config.type})...`);
-    
-    let activeModels = [];
-    let width = 512;
-    let height = 768;
-    
-    if (config.forceModel) {
-      activeModels = [config.forceModel];
-      if (config.type === 'sdxl') {
-        width = 768;
-        height = 1024;
+    const res = await axios.get(`${HORDE_BASE}/v2/status/models`, {
+      headers: { 'Client-Agent': 'PriyaBot:1.0:telegram' },
+      timeout: 12000
+    });
+    return res.data;
+  } catch (e) {
+    console.error("⚠️ Failed to fetch live Horde models status:", e.message);
+    return [];
+  }
+}
+
+function selectBestModel(liveModels, group) {
+  let preferredList = [];
+  if (group === 'sdxl_group') {
+    preferredList = [
+      ...PREFERRED_MODELS.pony,
+      ...PREFERRED_MODELS.illustrious,
+      ...PREFERRED_MODELS.sdxl
+    ];
+  } else if (group === 'sd15_group') {
+    preferredList = PREFERRED_MODELS.sd15;
+  } else {
+    preferredList = [];
+  }
+
+  // Filter live models
+  const available = liveModels.filter(m => {
+    if (m.count <= 0) return false;
+    if (group === 'emergency_group') {
+      return getModelType(m.name) === 'sd15';
+    }
+    return preferredList.includes(m.name);
+  });
+
+  if (available.length === 0) {
+    // Dynamic fallback: look for any online model of correct type if preferred list is completely empty
+    const fallbackList = liveModels.filter(m => {
+      if (m.count <= 0) return false;
+      const mType = getModelType(m.name);
+      if (group === 'sdxl_group') {
+        return mType === 'pony' || mType === 'illustrious' || mType === 'sdxl';
       } else {
-        width = 512;
-        height = 768;
+        return mType === 'sd15';
       }
-    } else if (config.type === 'sdxl') {
-      // WAI-NSFW-illustrious-SDXL: Best NSFW-specific SDXL model, 9 active workers
-      activeModels = [
-        "WAI-NSFW-illustrious-SDXL",
-        "AlbedoBase XL (SDXL)",
-        "CyberRealistic Pony",
-        "AlbedoBase XL 3.1",
-        "Juggernaut XL"
-      ];
-      width = 768;
-      height = 1024;
-    } else {
-      // sd15-best: Only models confirmed to have active workers on Horde
-      activeModels = [
-        "stable_diffusion",
-        "ICBINP - I Can't Believe It's Not Photography",
-        "Deliberate",
-        "AbsoluteReality",
-        "NeverEnding Dream",
-        "Dreamshaper"
-      ];
-      width = 512;
-      height = 768;
+    });
+
+    if (fallbackList.length === 0) {
+      if (group === 'sdxl_group') {
+        return "WAI-NSFW-illustrious-SDXL";
+      } else {
+        return "stable_diffusion";
+      }
     }
 
-    const payload = {
-      prompt: fullPrompt,
-      params: {
-        sampler_name: "k_dpmpp_2m",
-        cfg_scale: 7.0,
-        width: width,
-        height: height,
-        steps: config.type === 'sdxl' ? 25 : 30,
-        karras: true,
-        post_processing: config.type === 'sdxl' ? [] : ["GFPGAN"] // Face restoration for SD15 to fix eyes/face
-      },
-      models: activeModels,
-      nsfw: true,
-      censor_nsfw: false,
-      trusted_workers: false,
-      slow_workers: true,
-      extra_slow_workers: true,
-      r2: true
-    };
+    fallbackList.sort((a, b) => {
+      const loadA = (a.queued || 0) / a.count;
+      const loadB = (b.queued || 0) / b.count;
+      return loadA - loadB;
+    });
+    return fallbackList[0].name;
+  }
+
+  // Sort available preferred models by queue load (queued / count)
+  available.sort((a, b) => {
+    const loadA = (a.queued || 0) / a.count;
+    const loadB = (b.queued || 0) / b.count;
+    return loadA - loadB;
+  });
+
+  return available[0].name;
+}
+
+function prepareHordePayload(modelName, prompt, negativePrompt, isClothingRequested) {
+  const mType = getModelType(modelName);
+  
+  let finalPrompt = prompt;
+  let finalNegPrompt = negativePrompt;
+  let width = 512;
+  let height = 768;
+  let steps = 25;
+  let postProcessing = [];
+
+  if (mType === 'pony') {
+    width = 768;
+    height = 1024;
+    steps = 22;
+    const ratingTag = isClothingRequested ? "rating_suggestive" : "rating_explicit";
+    finalPrompt = `score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up, source_real, ${ratingTag}, ${prompt}`;
+    
+    const ponyNegPrefix = isClothingRequested
+      ? "score_4, score_3, score_2, score_1, 3d, monochrome, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name"
+      : "score_4, score_3, score_2, score_1, rating_safe, rating_questionable, 3d, monochrome, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name";
+    finalNegPrompt = `${ponyNegPrefix}, ${negativePrompt}`;
+  } else if (mType === 'illustrious') {
+    width = 768;
+    height = 1024;
+    steps = 22;
+    const ratingTag = isClothingRequested ? "rating_suggestive" : "rating_explicit";
+    finalPrompt = `masterpiece, best quality, ${ratingTag}, ${prompt}`;
+    
+    const illNegPrefix = "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name";
+    finalNegPrompt = `${illNegPrefix}, ${negativePrompt}`;
+  } else if (mType === 'sdxl') {
+    width = 768;
+    height = 1024;
+    steps = 22;
+  } else {
+    // SD 1.5
+    width = 512;
+    height = 768;
+    steps = 28;
+    postProcessing = ["GFPGAN"];
+  }
+
+  const fullPrompt = `${finalPrompt} ### ${finalNegPrompt}`;
+  
+  return {
+    prompt: fullPrompt,
+    params: {
+      sampler_name: "k_dpmpp_2m",
+      cfg_scale: 7.0,
+      width: width,
+      height: height,
+      steps: steps,
+      karras: true,
+      post_processing: postProcessing
+    },
+    models: [modelName],
+    nsfw: true,
+    censor_nsfw: false,
+    trusted_workers: false,
+    slow_workers: true,
+    extra_slow_workers: true,
+    r2: true
+  };
+}
+
+async function generateWithHorde(prompt, negativePrompt, config = { group: 'sdxl_group', isClothingRequested: false, abortIfSlow: true, maxAttempts: 15 }) {
+  try {
+    console.log(`📡 Fetching live Horde models for group: ${config.group}...`);
+    const liveModels = await getBestHordeModels();
+    
+    let targetModel;
+    if (config.forceModel) {
+      targetModel = config.forceModel;
+    } else {
+      targetModel = selectBestModel(liveModels, config.group);
+    }
+    
+    console.log(`🎯 Selected Horde Model: ${targetModel}`);
+    const payload = prepareHordePayload(targetModel, prompt, negativePrompt, config.isClothingRequested);
+    console.log(`🎨 Submitting job to AI Horde under model ${targetModel}...`);
 
     let submitRes;
     try {
@@ -524,12 +650,11 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     } catch (submitErr) {
       console.error("⚠️ AI Horde primary key submission failed:", submitErr.response?.data || submitErr.message);
       
-      // If unauthorized (401) or forbidden (403), fallback automatically to the anonymous key so the user still gets their images!
       if (submitErr.response?.status === 401 || submitErr.response?.status === 403 || HORDE_API_KEY === '0000000000') {
         console.log("🔄 Retrying submission with Anonymous API key...");
         submitRes = await axios.post(`${HORDE_BASE}/v2/generate/async`, payload, {
           headers: { 
-            'apikey': '0000000000', // Solid fallback key
+            'apikey': '0000000000',
             'Client-Agent': 'PriyaBot:1.0:telegram',
             'Content-Type': 'application/json'
           },
@@ -545,7 +670,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     console.log(`📋 Job submitted successfully! ID: ${jobId}`);
     
     let attempts = 0;
-    const maxAttempts = config.maxAttempts || 45;
+    const maxAttempts = config.maxAttempts || 15;
     
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 3000));
@@ -560,7 +685,19 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
         
-        // Don't abort - let the queue process naturally. Wait times drop as workers complete jobs.
+        if (config.abortIfSlow && attempts >= 3 && status.wait_time > 180 && !status.done) {
+          console.log(`⚠️ Queue wait time is too high (${status.wait_time}s). Aborting job to allow fallback...`);
+          try {
+            await axios.delete(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
+              headers: { 'Client-Agent': 'PriyaBot:1.0:telegram', 'apikey': HORDE_API_KEY },
+              timeout: 8000
+            });
+            console.log(`🗑️ Successfully cancelled aborted Horde job ${jobId}`);
+          } catch (cancelErr) {
+            // Ignore cancel errors
+          }
+          return null;
+        }
         
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
@@ -569,7 +706,6 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
           });
           
           const generations = resultRes.data.generations;
-          console.log(`🎁 Generations array returned:`, JSON.stringify(generations ? generations.map(g => ({ censored: g.censored, imgType: typeof g.img, startsWithHttp: g.img?.startsWith('http') })) : null));
           if (generations && generations.length > 0) {
             const gen = generations[0];
             if (gen.censored) {
@@ -577,9 +713,8 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
               return null;
             }
             
-            // Save successful model name in config reference
-            if (config && gen.model) {
-              config.successModel = gen.model;
+            if (config) {
+              config.successModel = targetModel;
             }
             
             if (gen.img.startsWith('http')) {
@@ -593,7 +728,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         }
         
         if (!status.is_possible) {
-          console.log("❌ No workers available");
+          console.log("❌ No workers available for this model");
           return null;
         }
       } catch (pollErr) {
@@ -602,7 +737,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     }
     return null;
   } catch (e) {
-    console.error("Horde submit error:", e.response?.data || e.message);
+    console.error("Horde submit/process error:", e.response?.data || e.message);
     return null;
   }
 }
@@ -619,6 +754,42 @@ function hasClothingRequest(history, visualDesc) {
   return combined.match(/(saree|sari|dress|clothes|clothing|outfit|wear|wearing|skirt|jeans|top|lingerie|bikini|nighty|gown|suit|salwar|kurti|bra|panties|pant|shirt|t-shirt|panty|kapde|kapda|drape|draped)/i) !== null;
 }
 
+const CHARACTER_STATUS_MESSAGES = {
+  priya: {
+    initial: `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`,
+    fallback_1: `Jaan, premium server thoda slow chal raha hai, main realistic model pe switch kar rahi hoon taaki jaldi photo aa jaye... Bas thoda sa sabr rakho... 💋`,
+    fallback_2: `Arey jaan, servers bohot heavy hain aaj. Main ultra-fast line use kar rahi hoon taaki tumhe zyada intezar na karna pade... Sabse garam photo bhej rahi hoon! 🔥`
+  },
+  kavya: {
+    initial: `Hold on baby! Tumhare liye ek mast nangi photo clicks kar rahi hoon... Ekdum solid maal load ho raha hai, bas 30-40 secs! 📸😏🔥`,
+    fallback_1: `Arey yaar, ye premium line toh slow hai. Main fast wale server pe switch kar rahi hoon taaki instant photo mile. Line pe raho! 😉`,
+    fallback_2: `Uff, lagta hai poore campus ke ladke line mein hain! Main speed server use kar rahi hoon taaki tum jaldi se meri photo dekh sako! 💦`
+  },
+  sneha: {
+    initial: `Suno na dear, tumhare liye ek behad sharmili aur nangi photo shoot kar rahi hoon... Har ek ang saaf dikhega, thoda sa wait karo na... 🤫🔞`,
+    fallback_1: `Lagta hai server bhi hume dekhna chahta hai, thoda slow hai. Main realistic lane pe ja rahi hoon taaki jaldi photo mil jaye dear... 🌹`,
+    fallback_2: `Dear, wait nahi ho raha na? Main fast route se photo bhej rahi hoon taaki hum bina kisi rukawat ke aage badhein... 😏🔥`
+  },
+  savita: {
+    initial: `Arey devar ji, ruko! Tumhare liye ekdum garam aur nangi photo bhej rahi hoon... Dekhte hi muth maarne ka mann karega, bas 30 seconds! 🔞💦👅`,
+    fallback_1: `Devar ji, premium server toh thak gaya! Main realistic server pe shift kar rahi hoon taaki jaldi se meri gori jawani dekh sako! 😉🔥`,
+    fallback_2: `Uff besharam! Sabr nahi ho raha na? Server pe bohot bheed hai, par main fast emergency line se bhej rahi hoon... Taiyar raho! 💋💦`
+  }
+};
+
+function getStatusMessage(characterId, stage) {
+  const charMsgs = CHARACTER_STATUS_MESSAGES[characterId] || CHARACTER_STATUS_MESSAGES.priya;
+  return charMsgs[stage];
+}
+
+async function safeEditMessage(chatId, messageId, text) {
+  try {
+    await bot.editMessageText(text, { chat_id: chatId, message_id: messageId });
+  } catch (e) {
+    console.error("⚠️ Failed to edit Telegram message:", e.message);
+  }
+}
+
 async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescription = null) {
   const mem = loadMemory();
   const user = getUser(mem, String(chatId));
@@ -628,26 +799,19 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const category = forceDescription ? getFocusCategory([], forceDescription) : getFocusCategory(history, visualDesc);
   console.log(`📸 Image request category determined: ${category} for ${char.name}`);
 
-  // Save the prompt tags for consistency on next interactive action
   if (!forceDescription) {
     user.lastVisualDesc = visualDesc;
-    user.lastGeneratedModel = null; // Clear previous locked model on fresh request
+    user.lastGeneratedModel = null;
     saveMemory(mem);
   }
 
   let prompt = "";
   let negPrompt = "";
 
-  // Character specific identity tags for image generation
   const identityTags = char.identityTags;
-
-  // Anti-cartoon/drawing/anime keywords to force photorealism
   const antiCartoonNegative = "cartoon, anime, 3d, illustration, drawing, painting, digital art, sketch, cg, 3d render, artwork, canvas, bad photo, cell shaded, anime style, manga, semi-realistic, 3d digital render";
-
-  // Base negative prompt keywords to prevent common distortions
   const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, cropped hands, malformed hands, malformed limbs, floating limbs, disconnected limbs, out of frame, bad eyes, crossed eyes, asymmetric eyes, lazy eye, multiple heads, cloned face, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`;
 
-  // Determine if user requested clothing, and if so, remove it from the negative prompt to allow rendering clothes
   const isClothingRequested = forceDescription ? false : hasClothingRequest(history, visualDesc);
   const activeNegative = isClothingRequested
     ? `watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, bad eyes, crossed eyes, asymmetric eyes, malformed hands, malformed limbs, floating limbs, ugly feet, malformed feet, extra toes, ${antiCartoonNegative}`
@@ -687,48 +851,110 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const captionList = isClothingRequested ? clothedCaptions : nakedCaptions;
   const caption = captionList[Math.floor(Math.random() * captionList.length)];
   
+  let statusMsg;
   try {
-    // Send immediate warm message to acknowledge their request
-    await bot.sendMessage(chatId, `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`);
-    
-    console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
-    const sdxlConfig = { type: 'sdxl', maxAttempts: 40 };
-    if (forceDescription && user.lastGeneratedModel) {
-      sdxlConfig.forceModel = user.lastGeneratedModel;
-    }
-    
-    let imageBuffer = await generateWithHorde(prompt, negPrompt, sdxlConfig);
-    
-    // Setup inline buttons for interactive photo controls
-    const opts = {
-      caption,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "Turn Around 🍑 (Ass View)", callback_data: `photo_ass_${characterId}` },
-            { text: "Spread Legs 🔞 (Pussy View)", callback_data: `photo_pussy_${characterId}` }
-          ],
-          [
-            { text: "Strip Clothes 👙 (Breasts)", callback_data: `photo_breasts_${characterId}` },
-            { text: "Zoom In Face 🔍", callback_data: `photo_face_${characterId}` }
-          ]
-        ]
-      }
-    };
+    const initialText = getStatusMessage(characterId, 'initial');
+    statusMsg = await bot.sendMessage(chatId, initialText);
+  } catch (msgErr) {
+    console.error("⚠️ Failed to send initial status message:", msgErr.message);
+  }
 
+  const statusMsgId = statusMsg ? statusMsg.message_id : null;
+
+  // Stage 1: SDXL/Pony/Illustrious
+  console.log(`🎨 Stage 1: AI Horde (SDXL/Pony/Illustrious)...`);
+  const config1 = {
+    group: 'sdxl_group',
+    isClothingRequested,
+    abortIfSlow: true,
+    maxAttempts: 15
+  };
+  if (forceDescription && user.lastGeneratedModel) {
+    config1.forceModel = user.lastGeneratedModel;
+  }
+  
+  let imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
+  let successModel = config1.successModel;
+
+  // Stage 2: SD 1.5 Realistic
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+    }
+    console.log(`🎨 Stage 2: AI Horde (SD 1.5 Realistic)...`);
+    const config2 = {
+      group: 'sd15_group',
+      isClothingRequested,
+      abortIfSlow: true,
+      maxAttempts: 15
+    };
+    imageBuffer = await generateWithHorde(prompt, negPrompt, config2);
+    successModel = config2.successModel;
+  }
+
+  // Stage 3: SD 1.5 Emergency Ultra-Fast
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
+    }
+    console.log(`🎨 Stage 3: AI Horde (SD 1.5 Emergency)...`);
+    const config3 = {
+      group: 'emergency_group',
+      isClothingRequested,
+      abortIfSlow: false,
+      maxAttempts: 40
+    };
+    imageBuffer = await generateWithHorde(prompt, negPrompt, config3);
+    successModel = config3.successModel;
+  }
+
+  const opts = {
+    caption,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "Turn Around 🍑 (Ass View)", callback_data: `photo_ass_${characterId}` },
+          { text: "Spread Legs 🔞 (Pussy View)", callback_data: `photo_pussy_${characterId}` }
+        ],
+        [
+          { text: "Strip Clothes 👙 (Breasts)", callback_data: `photo_breasts_${characterId}` },
+          { text: "Zoom In Face 🔍", callback_data: `photo_face_${characterId}` }
+        ]
+      ]
+    }
+  };
+
+  try {
     if (imageBuffer) {
-      if (sdxlConfig.successModel) {
-        user.lastGeneratedModel = sdxlConfig.successModel;
+      if (successModel) {
+        user.lastGeneratedModel = successModel;
         saveMemory(mem);
       }
+      
+      if (statusMsgId) {
+        try {
+          await bot.deleteMessage(chatId, statusMsgId);
+        } catch (delErr) {
+          // Ignore delete errors
+        }
+      }
+      
       await bot.sendPhoto(chatId, imageBuffer, opts);
       return;
     }
 
-    await bot.sendMessage(chatId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
+    } else {
+      await bot.sendMessage(chatId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
+    }
   } catch (e) {
     console.error("Photo send error:", e.message);
-    await bot.sendMessage(chatId, `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`);
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`);
+    } else {
+      await bot.sendMessage(chatId, `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`);
+    }
   }
 }
 
