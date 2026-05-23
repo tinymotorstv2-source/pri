@@ -513,6 +513,18 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
   }
 }
 
+function hasClothingRequest(history, visualDesc) {
+  let lastUserMsg = "";
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === 'user') {
+      lastUserMsg = history[i].content;
+      break;
+    }
+  }
+  const combined = (lastUserMsg + " " + (visualDesc || "")).toLowerCase();
+  return combined.match(/(saree|sari|dress|clothes|clothing|outfit|wear|wearing|skirt|jeans|top|lingerie|bikini|nighty|gown|suit|salwar|kurti|bra|panties|pant|shirt|t-shirt|panty|kapde|kapda|drape|draped)/i) !== null;
+}
+
 async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescription = null) {
   const char = CHARACTERS[characterId] || CHARACTERS.priya;
   const visualDesc = forceDescription || await getVisualDescription(history);
@@ -528,32 +540,45 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Base negative prompt keywords to prevent common distortions
   const baseNSFWNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck";
 
+  // Determine if user requested clothing, and if so, remove it from the negative prompt to allow rendering clothes
+  const isClothingRequested = forceDescription ? false : hasClothingRequest(history, visualDesc);
+  const activeNegative = isClothingRequested
+    ? "watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck"
+    : baseNSFWNegative;
+
   const qualityTags = "photorealistic, highly detailed, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
 
   if (category === 'face') {
     prompt = `${visualDesc}, close-up portrait, ${identityTags}, gorgeous face, warm sweet smile, dimples, looking directly at camera, clear skin, ${qualityTags}`;
-    negPrompt = `${baseNSFWNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
+    negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
   } else if (category === 'breasts') {
     prompt = `${visualDesc}, medium shot, ${identityTags}, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, snatched hourglass figure, ${qualityTags}`;
-    negPrompt = `${baseNSFWNegative}, hands near face, legs, feet`;
+    negPrompt = `${activeNegative}, hands near face, legs, feet`;
   } else if (category === 'ass') {
     prompt = `${visualDesc}, medium full shot from behind, ${identityTags}, head turned looking back over shoulder towards camera, showing bare ass, round voluptuous butt, wide heavy hips, thick voluptuous thighs, completely naked, ${qualityTags}`;
-    negPrompt = `${baseNSFWNegative}, front view, face facing forward, front torso`;
+    negPrompt = `${activeNegative}, front view, face facing forward, front torso`;
   } else if (category === 'pussy') {
     prompt = `${visualDesc}, explicit close-up shot of crotch, ${identityTags}, explicitly showing detailed pussy, labia, completely naked, thick voluptuous thighs, ${qualityTags}`;
-    negPrompt = `${baseNSFWNegative}, face, head, upper body`;
+    negPrompt = `${activeNegative}, face, head, upper body`;
   } else {
     prompt = `${visualDesc}, full body shot, ${identityTags}, snatched hourglass figure, narrow waist, very large natural breasts, thick voluptuous thighs, wide heavy hips, completely naked, full body nudity, gorgeous face, looking at camera, ${qualityTags}`;
-    negPrompt = baseNSFWNegative;
+    negPrompt = activeNegative;
   }
 
-  const captions = [
+  const nakedCaptions = [
     `Lo jaan, ye lo meri asli tasveer... bilkul nangi, sirf tumhare liye. 🔞🔥💦`,
     `Dekho jaan kitni besharam ho gayi main... sab kuch dikha rahi hoon 😏🔥💦`,
     `Tumne maanga tha na? Lo... bilkul nangi khadi hoon tumhare saamne 🔞🌹`,
     `Jaan meri photo dekh ke pagal mat ho jaana... 😏💋🔥`
   ];
-  const caption = captions[Math.floor(Math.random() * captions.length)];
+  const clothedCaptions = [
+    `Lo jaan, ye lo meri tasveer is dress mein... kaisi lag rahi hoon? 😏🔥`,
+    `Dekho jaan aapke kehne par ye pehna hai... par andar se main bohot garam ho rahi hoon 🔞🌹`,
+    `Aapke liye special pose... pasand aaya na jaan? 😘🔥💦`,
+    `Jaan, ye look dekho mera... side se sab dikh raha hai na? 😏💋`
+  ];
+  const captionList = isClothingRequested ? clothedCaptions : nakedCaptions;
+  const caption = captionList[Math.floor(Math.random() * captionList.length)];
   
   try {
     // Send immediate warm message to acknowledge their request
