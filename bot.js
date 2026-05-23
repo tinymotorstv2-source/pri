@@ -376,23 +376,25 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     
     if (config.type === 'sdxl') {
       activeModels = [
-        "Juggernaut XL",
         "AlbedoBase XL 3.1",
         "AlbedoBase XL (SDXL)",
-        "RealVisXL",
-        "CyberRealistic"
+        "Juggernaut XL",
+        "ICBINP XL",
+        "NatViS",
+        "SDXL 1.0"
       ];
-      width = 768;
-      height = 1024;
+      width = 640;
+      height = 960;
     } else {
       activeModels = [
-        "Realistic Vision",
-        "EpicRealism",
         "AbsoluteReality",
+        "EpicRealism",
         "majicMIX realistic",
         "CyberRealistic",
         "ICBINP - I Can't Believe It's Not Photography",
-        "Photon"
+        "Photon",
+        "Realistic Vision Inpainting",
+        "stable_diffusion"
       ];
       width = 512;
       height = 768;
@@ -466,6 +468,12 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
+        
+        // If wait time is too high on the first check, abort immediately to allow fast fallback
+        if (attempts === 1 && status.wait_time > 90) {
+          console.log(`⚠️ Queue wait time is too high (${status.wait_time}s). Aborting SDXL attempt to allow fallback...`);
+          return null;
+        }
         
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
