@@ -467,15 +467,13 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         height = 768;
       }
     } else if (config.type === 'sdxl') {
-      // Only models confirmed to have active workers on Horde
+      // WAI-NSFW-illustrious-SDXL: Best NSFW-specific SDXL model, 9 active workers
       activeModels = [
         "WAI-NSFW-illustrious-SDXL",
         "AlbedoBase XL (SDXL)",
-        "AlbedoBase XL 3.1",
         "CyberRealistic Pony",
-        "Juggernaut XL",
-        "AMPonyXL",
-        "Pony Diffusion XL"
+        "AlbedoBase XL 3.1",
+        "Juggernaut XL"
       ];
       width = 768;
       height = 1024;
@@ -562,11 +560,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
         
-        // Abort SDXL early if wait is too long — SD15 workers are faster and more available
-        if (config.type === 'sdxl' && attempts >= 3 && status.wait_time > 240) {
-          console.log(`⚠️ SDXL queue wait time is too high (${status.wait_time}s). Aborting to allow fallback...`);
-          return null;
-        }
+        // Don't abort - let the queue process naturally. Wait times drop as workers complete jobs.
         
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
@@ -698,7 +692,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     await bot.sendMessage(chatId, `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`);
     
     console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
-    const sdxlConfig = { type: 'sdxl', maxAttempts: 20 };
+    const sdxlConfig = { type: 'sdxl', maxAttempts: 40 };
     if (forceDescription && user.lastGeneratedModel) {
       sdxlConfig.forceModel = user.lastGeneratedModel;
     }
@@ -728,22 +722,6 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
         saveMemory(mem);
       }
       await bot.sendPhoto(chatId, imageBuffer, opts);
-      return;
-    }
-
-    // Attempt 2: Best SD15 photorealistic models — fast queue, perfect anatomy
-    console.log("🔄 Attempt 2: AI Horde (SD15 Best Quality)...");
-    await bot.sendMessage(chatId, `Jaan, ek aur server try kar rahi hoon... bas 1-2 minute aur, ekdum perfect photo aayegi! 😘🔥`);
-
-    const sd15BestConfig = { type: 'sd15-best', maxAttempts: 20 };
-    const imageBuffer2 = await generateWithHorde(prompt, negPrompt, sd15BestConfig);
-
-    if (imageBuffer2) {
-      if (sd15BestConfig.successModel) {
-        user.lastGeneratedModel = sd15BestConfig.successModel;
-        saveMemory(mem);
-      }
-      await bot.sendPhoto(chatId, imageBuffer2, opts);
       return;
     }
 
