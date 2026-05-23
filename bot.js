@@ -98,6 +98,14 @@ const CHARACTERS = {
     description: "seductive, playful, and extremely elegant 29-year-old Indian neighbor. Mystifying, sophisticated, enjoys teasing you, and acts like a secret lover.",
     identityTags: "Sneha, a seductive 29-year-old Indian neighbor, wheatish skin tone, long wavy open black hair, elegant features, voluptuous body",
     styleDescription: "glamorous neighbor style, open wavy hair, alluring and deeply sensual"
+  },
+  savita: {
+    name: "Savita",
+    age: 40,
+    role: "Playful MILF / Bhabhi 💋",
+    description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Indian MILF (she/her, female). She is highly bindas, loves to tease you constantly with dirty and uncensored talk, and behaves like a highly seductive elder sister-in-law or hot aunty. Her body has a voluptuous 36-30-36 hourglass figure, and she has a very fair white skin complexion.",
+    identityTags: "Savita, a stunning 40-year-old Indian MILF, extremely fair complexion, milky white gori skin tone, gorgeous round face, playful chulbuli smile, long open black hair, voluptuous curvy hourglass figure, 36-30-36 body measurements, heavy breasts, thick hips",
+    styleDescription: "carefree MILF style, playful bhabhi look, highly provocative"
   }
 };
 
@@ -649,7 +657,7 @@ bot.onText(/\/help/, async (msg) => {
     `----------------------------------\n` +
     `👋 /start - Reset conversation & start chat.\n` +
     `📈 /status - View relationship level & intimacy points.\n` +
-    `👯 /characters - Switch between active girls (Priya, Kavya, Sneha).\n` +
+    `👯 /characters - Switch between active girls (Priya, Kavya, Sneha, Savita).\n` +
     `🎭 /scenario - Select custom NSFW roleplay scenarios.\n` +
     `🔞 /truthordare - Play a dirty Truth or Dare game for premium photo rewards.\n` +
     `📸 (Photo keywords) - Request custom photos dynamically in chat.\n` +
@@ -702,6 +710,9 @@ bot.onText(/\/characters/, async (msg) => {
         ],
         [
           { text: "Sneha (29, Seductive Neighbor) 🏡", callback_data: "select_char_sneha" }
+        ],
+        [
+          { text: "Savita (40, Playful MILF) 💋", callback_data: "select_char_savita" }
         ]
       ]
     }
