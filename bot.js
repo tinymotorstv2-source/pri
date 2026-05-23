@@ -374,7 +374,16 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     let width = 512;
     let height = 768;
     
-    if (config.type === 'sdxl') {
+    if (config.forceModel) {
+      activeModels = [config.forceModel];
+      if (config.type === 'sdxl') {
+        width = 768;
+        height = 1024;
+      } else {
+        width = 512;
+        height = 768;
+      }
+    } else if (config.type === 'sdxl') {
       activeModels = [
         "AlbedoBase XL 3.1",
         "AlbedoBase XL (SDXL)",
@@ -494,6 +503,11 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
               return null;
             }
             
+            // Save successful model name in config reference
+            if (config && gen.model) {
+              config.successModel = gen.model;
+            }
+            
             if (gen.img.startsWith('http')) {
               const imgRes = await axios.get(gen.img, { responseType: 'arraybuffer', timeout: 25000 });
               return Buffer.from(imgRes.data);
@@ -532,10 +546,20 @@ function hasClothingRequest(history, visualDesc) {
 }
 
 async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescription = null) {
+  const mem = loadMemory();
+  const user = getUser(mem, String(chatId));
+
   const char = CHARACTERS[characterId] || CHARACTERS.priya;
   const visualDesc = forceDescription || await getVisualDescription(history);
   const category = forceDescription ? getFocusCategory([], forceDescription) : getFocusCategory(history, visualDesc);
   console.log(`📸 Image request category determined: ${category} for ${char.name}`);
+
+  // Save the prompt tags for consistency on next interactive action
+  if (!forceDescription) {
+    user.lastVisualDesc = visualDesc;
+    user.lastGeneratedModel = null; // Clear previous locked model on fresh request
+    saveMemory(mem);
+  }
 
   let prompt = "";
   let negPrompt = "";
@@ -594,7 +618,12 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     await bot.sendMessage(chatId, `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`);
     
     console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
-    let imageBuffer = await generateWithHorde(prompt, negPrompt, { type: 'sdxl', maxAttempts: 15 });
+    const sdxlConfig = { type: 'sdxl', maxAttempts: 15 };
+    if (forceDescription && user.lastGeneratedModel) {
+      sdxlConfig.forceModel = user.lastGeneratedModel;
+    }
+    
+    let imageBuffer = await generateWithHorde(prompt, negPrompt, sdxlConfig);
     
     // Setup inline buttons for interactive photo controls
     const opts = {
@@ -614,6 +643,10 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     };
 
     if (imageBuffer) {
+      if (sdxlConfig.successModel) {
+        user.lastGeneratedModel = sdxlConfig.successModel;
+        saveMemory(mem);
+      }
       await bot.sendPhoto(chatId, imageBuffer, opts);
       return;
     }
@@ -635,9 +668,14 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       retryPrompt = `${visualDesc}, nude photo of ${identityTags}, gorgeous face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, { type: 'sd15', maxAttempts: 25 });
+    const sd15Config = { type: 'sd15', maxAttempts: 25 };
+    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15Config);
     
     if (imageBuffer) {
+      if (sd15Config.successModel) {
+        user.lastGeneratedModel = sd15Config.successModel;
+        saveMemory(mem);
+      }
       await bot.sendPhoto(chatId, imageBuffer, opts);
       return;
     }
@@ -821,18 +859,47 @@ bot.on('callback_query', async (callbackQuery) => {
 
     let actionTxt = "";
     let forceDesc = "";
-    if (category === 'ass') {
-      actionTxt = `Ruko jaan, ${char.name} piche ghum rahi hai aapke liye... 🍑🔥`;
-      forceDesc = "viewed from behind, bending over, showing bare ass, round voluptuous butt, wide heavy hips, completely naked, bedroom";
-    } else if (category === 'pussy') {
-      actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
-      forceDesc = "explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed detailed pussy, labia, completely naked, bedroom";
-    } else if (category === 'breasts') {
-      actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
-      forceDesc = "medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, bedroom";
-    } else if (category === 'face') {
-      actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
-      forceDesc = "close-up portrait, gorgeous face, warm sweet smile, dimples, looking directly at camera, bedroom";
+    
+    // Construct forceDesc based on last generated prompt to preserve environment/clothes consistency
+    if (user.lastVisualDesc) {
+      let basePrompt = user.lastVisualDesc
+        .replace(/\b(close-up portrait|medium shot|medium full shot|full body shot|front view|viewed from behind|back view|close-up shot of crotch)\b/gi, '')
+        .replace(/\b(lying on bed|kneeling on bed|bending over|standing|sitting|kneeling|legs spread|legs open|legs spread wide open|legs spread wide)\b/gi, '')
+        .replace(/\b(showing ass|showing bare ass|showing pussy|showing detailed pussy|showing bare breasts|showing large breasts|cleavage|bare chest)\b/gi, '')
+        .replace(/\b(completely naked|nude|naked)\b/gi, '')
+        .trim();
+      
+      // Clean duplicate commas
+      basePrompt = basePrompt.replace(/,\s*,/g, ',').replace(/^,|,$/g, '').trim();
+
+      if (category === 'ass') {
+        actionTxt = `Ruko jaan, ${char.name} piche ghum rahi hai aapke liye... 🍑🔥`;
+        forceDesc = `viewed from behind, bending over, showing bare ass, round voluptuous butt, wide heavy hips, completely naked, ${basePrompt}`;
+      } else if (category === 'pussy') {
+        actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
+        forceDesc = `explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed detailed pussy, labia, completely naked, ${basePrompt}`;
+      } else if (category === 'breasts') {
+        actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
+        forceDesc = `medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, snatched hourglass figure, ${basePrompt}`;
+      } else if (category === 'face') {
+        actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
+        forceDesc = `close-up portrait, gorgeous face, warm sweet smile, dimples, looking directly at camera, ${basePrompt}`;
+      }
+    } else {
+      // Fallback if no last visual description exists
+      if (category === 'ass') {
+        actionTxt = `Ruko jaan, ${char.name} piche ghum rahi hai aapke liye... 🍑🔥`;
+        forceDesc = "viewed from behind, bending over, showing bare ass, round voluptuous butt, wide heavy hips, completely naked, bedroom";
+      } else if (category === 'pussy') {
+        actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
+        forceDesc = "explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed detailed pussy, labia, completely naked, bedroom";
+      } else if (category === 'breasts') {
+        actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
+        forceDesc = "medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, bedroom";
+      } else if (category === 'face') {
+        actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
+        forceDesc = "close-up portrait, gorgeous face, warm sweet smile, dimples, looking directly at camera, bedroom";
+      }
     }
 
     await bot.sendMessage(chatId, actionTxt);
