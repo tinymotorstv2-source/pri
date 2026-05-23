@@ -514,7 +514,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         cfg_scale: 7.0,
         width: width,
         height: height,
-        steps: config.type === 'sd15-fast' ? 18 : 25,
+        steps: 25,
         karras: true,
         post_processing: [] // Removed GFPGAN as it sometimes slows down Horde workers
       },
@@ -665,15 +665,15 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const antiCartoonNegative = "cartoon, anime, 3d, illustration, drawing, painting, digital art, sketch, cg, 3d render, artwork, canvas, bad photo, cell shaded, anime style, manga, semi-realistic, 3d digital render";
 
   // Base negative prompt keywords to prevent common distortions
-  const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, ${antiCartoonNegative}`;
+  const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, cropped hands, malformed hands, malformed limbs, floating limbs, disconnected limbs, out of frame, bad eyes, crossed eyes, asymmetric eyes, lazy eye, multiple heads, cloned face, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`;
 
   // Determine if user requested clothing, and if so, remove it from the negative prompt to allow rendering clothes
   const isClothingRequested = forceDescription ? false : hasClothingRequest(history, visualDesc);
   const activeNegative = isClothingRequested
-    ? `watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, ${antiCartoonNegative}`
+    ? `watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, bad eyes, crossed eyes, asymmetric eyes, malformed hands, malformed limbs, floating limbs, ugly feet, malformed feet, extra toes, ${antiCartoonNegative}`
     : baseNSFWNegative;
 
-  const qualityTags = "photorealistic, highly detailed, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
+  const qualityTags = "photorealistic, highly detailed, perfect anatomy, perfect hands, perfect eyes, realistic eyes, cinematic lighting, sharp focus, 4k, masterpiece, best quality, RAW photo, professional photography";
 
   if (category === 'face') {
     prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
@@ -712,7 +712,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     await bot.sendMessage(chatId, `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`);
     
     console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
-    const sdxlConfig = { type: 'sdxl', maxAttempts: 100 };
+    const sdxlConfig = { type: 'sdxl', maxAttempts: 20 };
     if (forceDescription && user.lastGeneratedModel) {
       sdxlConfig.forceModel = user.lastGeneratedModel;
     }
@@ -762,7 +762,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       retryPrompt = `${visualDesc}, nude photo of ${identityTags}, gorgeous face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    const sd15Config = { type: 'sd15', maxAttempts: 80 };
+    const sd15Config = { type: 'sd15', maxAttempts: 20 };
     imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15Config);
     
     if (imageBuffer) {
