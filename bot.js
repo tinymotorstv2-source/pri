@@ -576,7 +576,11 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
         
-        // Log wait time but don't abort - let Horde complete naturally for best quality
+        // Abort SDXL early if wait is too long — SD15 workers are faster and more available
+        if (config.type === 'sdxl' && attempts >= 3 && status.wait_time > 240) {
+          console.log(`⚠️ SDXL queue wait time is too high (${status.wait_time}s). Aborting to allow fallback...`);
+          return null;
+        }
         
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
