@@ -745,36 +745,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       return;
     }
     
-    // Send reassuring intermediate message
-    await bot.sendMessage(chatId, `Jaan, primary server thoda busy hai par main haar nahi maan rahi... Ek aur backup server try kar rahi hoon aapke liye, bas thoda sa aur intezaar... 😘💖🔥`);
-    
-    console.log("🔄 Attempt 2: AI Horde (Retry with Any Worker)...");
-    let retryPrompt = "";
-    if (category === 'face') {
-      retryPrompt = `close-up portrait photo of ${identityTags}, gorgeous face, sweet smile, dimples, looking at camera, bare shoulders, photorealistic, 4k`;
-    } else if (category === 'ass') {
-      retryPrompt = `${visualDesc}, photo of ${identityTags} from behind, bending over, looking back over shoulder smiling, showing bare ass, completely naked, voluptuous, photorealistic, NSFW, explicit`;
-    } else if (category === 'breasts') {
-      retryPrompt = `${visualDesc}, medium shot of ${identityTags}, looking at camera smiling, showing large breasts, completely naked, photorealistic, NSFW, explicit`;
-    } else if (category === 'pussy') {
-      retryPrompt = `${visualDesc}, explicit close-up shot of crotch, ${identityTags}, legs spread wide open, showing detailed pussy, completely naked, photorealistic, NSFW, explicit`;
-    } else {
-      retryPrompt = `${visualDesc}, nude photo of ${identityTags}, gorgeous face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
-    }
-
-    const sd15Config = { type: 'sd15', maxAttempts: 20 };
-    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15Config);
-    
-    if (imageBuffer) {
-      if (sd15Config.successModel) {
-        user.lastGeneratedModel = sd15Config.successModel;
-        saveMemory(mem);
-      }
-      await bot.sendPhoto(chatId, imageBuffer, opts);
-      return;
-    }
-    
-    await bot.sendMessage(chatId, `Jaan, abhi saare servers overloaded hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
+    await bot.sendMessage(chatId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
   } catch (e) {
     console.error("Photo send error:", e.message);
     await bot.sendMessage(chatId, `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`);
