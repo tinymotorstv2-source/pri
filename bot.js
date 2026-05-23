@@ -467,24 +467,27 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         height = 768;
       }
     } else if (config.type === 'sdxl') {
+      // Only models confirmed to have active workers on Horde
       activeModels = [
-        "AlbedoBase XL 3.1",
+        "WAI-NSFW-illustrious-SDXL",
         "AlbedoBase XL (SDXL)",
+        "AlbedoBase XL 3.1",
         "CyberRealistic Pony",
-        "AMPonyXL",
         "Juggernaut XL",
-        "Pony Diffusion XL",
-        "WAI-NSFW-illustrious-SDXL"
+        "AMPonyXL",
+        "Pony Diffusion XL"
       ];
       width = 768;
       height = 1024;
     } else {
-      // sd15-best: Top 4 photorealistic models known for perfect anatomy, skin and face
+      // sd15-best: Only models confirmed to have active workers on Horde
       activeModels = [
-        "Realistic Vision",
-        "EpicRealism",
-        "majicMIX realistic",
-        "CyberRealistic"
+        "stable_diffusion",
+        "ICBINP - I Can't Believe It's Not Photography",
+        "Deliberate",
+        "AbsoluteReality",
+        "NeverEnding Dream",
+        "Dreamshaper"
       ];
       width = 512;
       height = 768;
