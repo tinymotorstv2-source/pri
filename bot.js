@@ -80,32 +80,48 @@ const CHARACTERS = {
     age: 38,
     role: "Mature Housewife / Aunty",
     description: "gorgeous, mature, and highly sophisticated 38-year-old Indian woman (she/her, female). Caring, warm, maternal, but intensely seductive and passionate.",
-    identityTags: "Priya, a stunning 38-year-old Indian woman, extremely fair complexion, milky white skin tone, very fair gora skin, dark brown hair neatly parted in the middle and tied back",
-    styleDescription: "mature housewife look, elegant yet deeply seductive"
+    identityTags: "Priya, a stunning 38-year-old Indian housewife, 38 years old, extremely fair complexion, milky white skin tone, very fair gora skin, dark brown hair neatly parted in the middle and tied back",
+    bodyTags: "mature curvaceous body, elegant soft curves, natural average size breasts, soft feminine belly, wide hips",
+    faceTags: "gorgeous mature round face, expressive brown eyes, elegant mature features, soft warm sweet smile, dimples",
+    breastTags: "natural shapely mature breasts, detailed soft nipples, cleavage",
+    buttTags: "soft curvaceous mature buttocks, natural wide housewife hips",
+    thighTags: "soft natural thighs"
   },
   kavya: {
     name: "Kavya",
     age: 24,
     role: "Bold College Girl",
     description: "hot, energetic, and extremely bold 24-year-old Indian college girl. Playful, teasing, highly expressive, and uses modern slang. Naughty and uninhibited.",
-    identityTags: "Kavya, a hot 24-year-old Indian college girl, dusky skin tone, short curly black hair, expressive eyes, athletic fit body",
-    styleDescription: "youthful college student style, sporty and very bold"
+    identityTags: "Kavya, a hot 24-year-old Indian college girl, 24 years old, dusky skin tone, short curly black hair, expressive dark eyes",
+    bodyTags: "athletic fit body, toned flat stomach, slim waist, perky proportions, youthful energy",
+    faceTags: "youthful cute face, playful naughty smile, energetic expressive features, looking at camera",
+    breastTags: "perky youthful round breasts, small firm nipples, cleavage",
+    buttTags: "firm toned athletic buttocks, fit slim hips",
+    thighTags: "toned athletic legs and thighs"
   },
   sneha: {
     name: "Sneha",
     age: 29,
     role: "Seductive Neighbor",
     description: "seductive, playful, and extremely elegant 29-year-old Indian neighbor. Mystifying, sophisticated, enjoys teasing you, and acts like a secret lover.",
-    identityTags: "Sneha, a seductive 29-year-old Indian neighbor, wheatish skin tone, long wavy open black hair, elegant features, voluptuous body",
-    styleDescription: "glamorous neighbor style, open wavy hair, alluring and deeply sensual"
+    identityTags: "Sneha, a seductive 29-year-old Indian neighbor, 29 years old, wheatish skin tone, long wavy open black hair, elegant features",
+    bodyTags: "voluptuous curvy body, snatched hourglass figure, narrow waist, attractive curves",
+    faceTags: "seductive elegant face, alluring heavy eyes, charming playful smile, open long hair",
+    breastTags: "voluptuous full breasts, detailed prominent nipples, deep cleavage",
+    buttTags: "plump round voluptuous buttocks, heavy feminine hips",
+    thighTags: "thick voluptuous thighs"
   },
   savita: {
     name: "Savita",
     age: 40,
     role: "Playful MILF / Bhabhi 💋",
     description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Indian MILF (she/her, female). She is highly bindas, loves to tease you constantly with dirty and uncensored talk, and behaves like a highly seductive elder sister-in-law or hot aunty. Her body has a voluptuous 36-30-36 hourglass figure, and she has a very fair white skin complexion.",
-    identityTags: "Savita, a stunning 40-year-old Indian MILF, extremely fair complexion, milky white gori skin tone, gorgeous round face, playful chulbuli smile, long open black hair, voluptuous curvy hourglass figure, 36-30-36 body measurements, heavy breasts, thick hips",
-    styleDescription: "carefree MILF style, playful bhabhi look, highly provocative"
+    identityTags: "Savita, a stunning 40-year-old Indian MILF, 40 years old, extremely fair complexion, milky white gori skin tone, long open black hair",
+    bodyTags: "voluptuous curvy MILF body, 36-30-36 body measurements, heavy hourglass figure, wide heavy hips, thick waist",
+    faceTags: "gorgeous mature round face, playful chulbuli smile, mischievous eyes, look of a carefree bhabhi",
+    breastTags: "large full heavy 36-inch breasts, prominent detailed nipples, deep cleavage",
+    buttTags: "wide heavy 36-inch voluptuous buttocks, curvy thick MILF hips",
+    thighTags: "thick voluptuous MILF thighs"
   }
 };
 
@@ -582,19 +598,19 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const qualityTags = "photorealistic, highly detailed, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
 
   if (category === 'face') {
-    prompt = `${visualDesc}, close-up portrait, ${identityTags}, gorgeous face, warm sweet smile, dimples, looking directly at camera, clear skin, ${qualityTags}`;
+    prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
     negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
   } else if (category === 'breasts') {
-    prompt = `${visualDesc}, medium shot, ${identityTags}, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, snatched hourglass figure, ${qualityTags}`;
+    prompt = `${visualDesc}, medium shot, ${identityTags}, showing ${char.breastTags}, bare chest, completely naked, ${char.bodyTags}, ${qualityTags}`;
     negPrompt = `${activeNegative}, hands near face, legs, feet`;
   } else if (category === 'ass') {
-    prompt = `${visualDesc}, medium full shot from behind, ${identityTags}, head turned looking back over shoulder towards camera, showing bare ass, round voluptuous butt, wide heavy hips, thick voluptuous thighs, completely naked, ${qualityTags}`;
+    prompt = `${visualDesc}, medium full shot from behind, ${identityTags}, head turned looking back over shoulder towards camera, showing bare ass, ${char.buttTags}, ${char.thighTags}, completely naked, ${qualityTags}`;
     negPrompt = `${activeNegative}, front view, face facing forward, front torso`;
   } else if (category === 'pussy') {
-    prompt = `${visualDesc}, explicit close-up shot of crotch, ${identityTags}, explicitly showing detailed pussy, labia, completely naked, thick voluptuous thighs, ${qualityTags}`;
+    prompt = `${visualDesc}, explicit close-up shot of crotch, ${identityTags}, explicitly showing detailed pussy, labia, completely naked, ${char.thighTags}, ${qualityTags}`;
     negPrompt = `${activeNegative}, face, head, upper body`;
   } else {
-    prompt = `${visualDesc}, full body shot, ${identityTags}, snatched hourglass figure, narrow waist, very large natural breasts, thick voluptuous thighs, wide heavy hips, completely naked, full body nudity, gorgeous face, looking at camera, ${qualityTags}`;
+    prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, showing ${char.breastTags}, completely naked, full body nudity, looking at camera, ${qualityTags}`;
     negPrompt = activeNegative;
   }
 
