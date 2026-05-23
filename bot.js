@@ -478,30 +478,13 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
       ];
       width = 768;
       height = 1024;
-    } else if (config.type === 'sd15-fast') {
-      activeModels = [
-        "stable_diffusion",
-        "Dreamshaper",
-        "Deliberate",
-        "AbsoluteReality",
-        "Realistic Vision"
-      ];
-      width = 512;
-      height = 512;
     } else {
+      // sd15-best: Top 4 photorealistic models known for perfect anatomy, skin and face
       activeModels = [
-        "stable_diffusion",
-        "URPM",
-        "AbsoluteReality",
         "Realistic Vision",
         "EpicRealism",
         "majicMIX realistic",
-        "CyberRealistic",
-        "Photon",
-        "ICBINP - I Can't Believe It's Not Photography",
-        "Dreamshaper",
-        "Deliberate",
-        "NeverEnding Dream"
+        "CyberRealistic"
       ];
       width = 512;
       height = 768;
@@ -514,9 +497,9 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         cfg_scale: 7.0,
         width: width,
         height: height,
-        steps: 25,
+        steps: config.type === 'sdxl' ? 25 : 30,
         karras: true,
-        post_processing: [] // Removed GFPGAN as it sometimes slows down Horde workers
+        post_processing: config.type === 'sdxl' ? [] : ["GFPGAN"] // Face restoration for SD15 to fix eyes/face
       },
       models: activeModels,
       nsfw: true,
@@ -744,7 +727,23 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       await bot.sendPhoto(chatId, imageBuffer, opts);
       return;
     }
-    
+
+    // Attempt 2: Best SD15 photorealistic models — fast queue, perfect anatomy
+    console.log("🔄 Attempt 2: AI Horde (SD15 Best Quality)...");
+    await bot.sendMessage(chatId, `Jaan, ek aur server try kar rahi hoon... bas 1-2 minute aur, ekdum perfect photo aayegi! 😘🔥`);
+
+    const sd15BestConfig = { type: 'sd15-best', maxAttempts: 20 };
+    const imageBuffer2 = await generateWithHorde(prompt, negPrompt, sd15BestConfig);
+
+    if (imageBuffer2) {
+      if (sd15BestConfig.successModel) {
+        user.lastGeneratedModel = sd15BestConfig.successModel;
+        saveMemory(mem);
+      }
+      await bot.sendPhoto(chatId, imageBuffer2, opts);
+      return;
+    }
+
     await bot.sendMessage(chatId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
   } catch (e) {
     console.error("Photo send error:", e.message);
