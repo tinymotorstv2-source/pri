@@ -171,14 +171,71 @@ function getUser(mem, uid) {
       points: 0,
       character: 'priya',
       scenario: 'default',
-      gameState: null
+      gameState: null,
+      longTermMemory: '',
+      lastActiveTime: Date.now(),
+      chatId: null,
+      lastProactiveTime: null,
+      proactiveCount: 0
     };
   }
   if (mem[uid].points === undefined) mem[uid].points = mem[uid].count || 0;
   if (mem[uid].character === undefined) mem[uid].character = 'priya';
   if (mem[uid].scenario === undefined) mem[uid].scenario = 'default';
   if (mem[uid].gameState === undefined) mem[uid].gameState = null;
+  if (mem[uid].longTermMemory === undefined) mem[uid].longTermMemory = '';
+  if (mem[uid].lastActiveTime === undefined) mem[uid].lastActiveTime = Date.now();
+  if (mem[uid].chatId === undefined) mem[uid].chatId = null;
+  if (mem[uid].lastProactiveTime === undefined) mem[uid].lastProactiveTime = null;
+  if (mem[uid].proactiveCount === undefined) mem[uid].proactiveCount = 0;
   return mem[uid];
+}
+
+async function updateLongTermMemoryInBackground(uid) {
+  try {
+    const mem = loadMemory();
+    const user = mem[uid];
+    if (!user || user.history.length < 4) return;
+
+    console.log(`🧠 Updating long-term memory for user ${uid}...`);
+    
+    const historyText = user.history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join("\n");
+    const currentMemory = user.longTermMemory || "No memory recorded yet.";
+
+    const promptText = `Current Long-Term Memory (Key facts about the User):
+${currentMemory}
+
+Recent Chat History:
+${historyText}
+
+Task: Update the Long-Term Memory list based on the new facts, preferences, secrets, roleplays, or relationship milestones revealed in the Recent Chat History.
+Rules:
+1. Output ONLY the updated list of facts as a concise bulleted list in English.
+2. Do not exceed 8 bullet points.
+3. Keep facts short (e.g. "User prefers Savita in a saree", "User likes to be called devar ji").
+4. Output absolutely no introductory or concluding text, only the bullet points.`;
+
+    const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'llama-3.3-70b-versatile', 
+      messages: [
+        { role: 'system', content: 'You are an internal background memory processor. You extract and output only a bulleted list of facts.' },
+        { role: 'user', content: promptText }
+      ],
+      temperature: 0.3
+    }, { headers: { Authorization: `Bearer ${GROQ_KEY}` }, timeout: 8000 });
+
+    const updatedMemory = res.data.choices[0].message.content.trim();
+    
+    // Reload memory to avoid overwrite conflicts
+    const freshMem = loadMemory();
+    if (freshMem[uid]) {
+      freshMem[uid].longTermMemory = updatedMemory;
+      saveMemory(freshMem);
+      console.log(`🧠 Long-term memory updated successfully for ${uid}`);
+    }
+  } catch (err) {
+    console.error("❌ Background memory update failed:", err.message);
+  }
 }
 
 // ─── STYLE FIXER ─────────────────────────────────────────────────────────────
@@ -229,6 +286,9 @@ Current Relationship Level: Level ${rel.level} - ${rel.name}. Behavior guideline
 
 CHARACTER CHAT STYLE GUIDELINES (CRITICAL):
 - ${char.chatGuidelines}
+
+LONG-TERM MEMORY OF PAST INTERACTIONS (Use this to remember facts, nicknames, and things the user shared with you):
+${userSettings.longTermMemory || "No memory recorded yet. Get to know the user better."}
 
 You are roleplaying with the USER, who is a younger BOY (he/him, male). 
 
@@ -418,8 +478,19 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
       ];
       width = 768;
       height = 1024;
+    } else if (config.type === 'sd15-fast') {
+      activeModels = [
+        "stable_diffusion",
+        "Dreamshaper",
+        "Deliberate",
+        "AbsoluteReality",
+        "Realistic Vision"
+      ];
+      width = 512;
+      height = 512;
     } else {
       activeModels = [
+        "stable_diffusion",
         "URPM",
         "AbsoluteReality",
         "Realistic Vision",
@@ -443,7 +514,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         cfg_scale: 7.0,
         width: width,
         height: height,
-        steps: 25, // Lowered back to 25 to improve queue priority
+        steps: config.type === 'sd15-fast' ? 18 : 25,
         karras: true,
         post_processing: [] // Removed GFPGAN as it sometimes slows down Horde workers
       },
@@ -505,9 +576,10 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
         
-        // Only abort SDXL if wait time remains high (> 300s) after at least 3 polls (giving Horde time to update worker status)
-        if (config.type === 'sdxl' && attempts >= 3 && status.wait_time > 300) {
-          console.log(`⚠️ SDXL queue wait time is too high (${status.wait_time}s). Aborting to allow fallback...`);
+        // Abort if wait time remains high (> 240s) after at least 3 polls (giving Horde time to update worker status)
+        // But do NOT abort early for 'sd15-fast' since it is the absolute final fallback stage
+        if (config.type !== 'sd15-fast' && attempts >= 3 && status.wait_time > 240) {
+          console.log(`⚠️ ${config.type} queue wait time is too high (${status.wait_time}s). Aborting to allow fallback...`);
           return null;
         }
         
@@ -691,12 +763,28 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       retryPrompt = `${visualDesc}, nude photo of ${identityTags}, gorgeous face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    const sd15Config = { type: 'sd15', maxAttempts: 25 };
+    const sd15Config = { type: 'sd15', maxAttempts: 15 };
     imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15Config);
     
     if (imageBuffer) {
       if (sd15Config.successModel) {
         user.lastGeneratedModel = sd15Config.successModel;
+        saveMemory(mem);
+      }
+      await bot.sendPhoto(chatId, imageBuffer, opts);
+      return;
+    }
+
+    // Attempt 3: Ultra-Fast base model fallback
+    await bot.sendMessage(chatId, `Arey yaar, servers par bohot load hai par main aapko bina photo ke nahi chodungi! Ek super-fast backup engine use kar rahi hoon... bas abhi aayi! 😏⚡📸`);
+    
+    console.log("🔄 Attempt 3: AI Horde (Ultra-Fast Fallback)...");
+    const sd15FastConfig = { type: 'sd15-fast', maxAttempts: 35 };
+    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15FastConfig);
+    
+    if (imageBuffer) {
+      if (sd15FastConfig.successModel) {
+        user.lastGeneratedModel = sd15FastConfig.successModel;
         saveMemory(mem);
       }
       await bot.sendPhoto(chatId, imageBuffer, opts);
@@ -731,15 +819,21 @@ bot.onText(/\/start/, async (msg) => {
   const uid = String(msg.from.id);
   const mem = loadMemory();
   
-  // Clear conversation state and reinitialize user settings
+  // Clear conversation state but preserve points, character, scenario, and long-term memory
+  const existingUser = mem[uid] || {};
   mem[uid] = { 
     history: [], 
-    name: msg.from.first_name || '', 
+    name: msg.from.first_name || existingUser.name || '', 
     count: 0,
-    points: 0,
-    character: 'priya',
-    scenario: 'default',
-    gameState: null
+    points: existingUser.points !== undefined ? existingUser.points : 0,
+    character: existingUser.character || 'priya',
+    scenario: existingUser.scenario || 'default',
+    gameState: null,
+    longTermMemory: existingUser.longTermMemory || '',
+    lastActiveTime: Date.now(),
+    chatId: chatId,
+    lastProactiveTime: existingUser.lastProactiveTime || null,
+    proactiveCount: 0
   };
   saveMemory(mem);
 
@@ -867,6 +961,12 @@ bot.on('callback_query', async (callbackQuery) => {
   const mem = loadMemory();
   const user = getUser(mem, uid);
 
+  // Update activity tracking and reset proactive count on button click
+  user.lastActiveTime = Date.now();
+  user.chatId = chatId;
+  user.proactiveCount = 0;
+  saveMemory(mem);
+
   try {
     await bot.answerCallbackQuery(callbackQuery.id);
   } catch (e) {
@@ -947,7 +1047,7 @@ bot.on('callback_query', async (callbackQuery) => {
       
       // Let the character start a small greeting
       try {
-        const initReply = await askAI([{ role: 'user', content: `Hello ${char.name}` }], { character: charId, scenario: user.scenario, points: user.points });
+        const initReply = await askAI([{ role: 'user', content: `Hello ${char.name}` }], { character: charId, scenario: user.scenario, points: user.points, longTermMemory: user.longTermMemory });
         user.history.push({ role: 'user', content: `Hello ${char.name}` });
         user.history.push({ role: 'assistant', content: initReply });
         saveMemory(mem);
@@ -971,7 +1071,7 @@ bot.on('callback_query', async (callbackQuery) => {
       try {
         const char = CHARACTERS[user.character];
         const introPrompt = `We are now in the scenario: ${scen.name}. Say something in character to start this scenario.`;
-        const initReply = await askAI([{ role: 'user', content: introPrompt }], { character: user.character, scenario: scenId, points: user.points });
+        const initReply = await askAI([{ role: 'user', content: introPrompt }], { character: user.character, scenario: scenId, points: user.points, longTermMemory: user.longTermMemory });
         
         user.history.push({ role: 'user', content: `Let's play: ${scen.name}` });
         user.history.push({ role: 'assistant', content: initReply });
@@ -1023,11 +1123,18 @@ bot.on('message', async (msg) => {
   const text = msg.text;
   
   if (!text) return;
-  // Ignore command calls in the general message handler since they are handled by bot.onText
-  if (text.startsWith('/')) return;
 
   const mem = loadMemory();
   const user = getUser(mem, uid);
+
+  // Update activity tracking and reset proactive count for ALL incoming messages
+  user.lastActiveTime = Date.now();
+  user.chatId = chatId;
+  user.proactiveCount = 0;
+  saveMemory(mem);
+
+  // Ignore command calls in the general message handler since they are handled by bot.onText
+  if (text.startsWith('/')) return;
 
   // If user is currently replying to Truth or Dare
   if (user.gameState) {
@@ -1054,6 +1161,11 @@ bot.on('message', async (msg) => {
     }
 
     await sendPriyaPhoto(chatId, user.history, user.character, forceDesc);
+    
+    // Trigger memory update
+    if (user.count % 8 === 0 && user.history.length >= 6) {
+      updateLongTermMemoryInBackground(uid);
+    }
     return;
   }
 
@@ -1062,6 +1174,11 @@ bot.on('message', async (msg) => {
   user.points++; // increment intimacy point for normal chat
   if (user.history.length > 20) user.history = user.history.slice(-20);
   saveMemory(mem);
+
+  // Trigger memory update
+  if (user.count % 8 === 0 && user.history.length >= 6) {
+    updateLongTermMemoryInBackground(uid);
+  }
 
   // IMAGE TRIGGERS
   if (text.toLowerCase().match(/(photo|pic|dikhao|image|bhejo|shakal|nangi|nude|sex|badan|breast|pussy|psy|gaand|dudh|chut|boobs|ass|chuchi|fuddi|pichwada)/)) {
@@ -1072,7 +1189,7 @@ bot.on('message', async (msg) => {
 
   await bot.sendChatAction(chatId, 'typing');
   try {
-    const reply = await askAI(user.history, { character: user.character, scenario: user.scenario, points: user.points });
+    const reply = await askAI(user.history, { character: user.character, scenario: user.scenario, points: user.points, longTermMemory: user.longTermMemory });
     user.history.push({ role: 'assistant', content: reply });
     saveMemory(mem);
     await bot.sendMessage(chatId, reply);
@@ -1094,5 +1211,50 @@ bot.on('message', async (msg) => {
     await bot.sendMessage(chatId, fallbackMsg);
   }
 });
+
+// ─── PROACTIVE CONVERSATION SCHEDULER (CHECK EVERY 30 MINS) ───────────────────
+setInterval(async () => {
+  console.log("⏰ Running proactive conversation scheduler...");
+  const mem = loadMemory();
+  const now = Date.now();
+  
+  for (const uid in mem) {
+    const user = mem[uid];
+    if (!user.chatId || !user.lastActiveTime) continue;
+    
+    const hoursInactive = (now - user.lastActiveTime) / (1000 * 60 * 60);
+    const hoursSinceLastProactive = user.lastProactiveTime ? (now - user.lastProactiveTime) / (1000 * 60 * 60) : 999;
+    
+    // Send proactive message if inactive for >= 4 hours, haven't sent one in the last 12 hours,
+    // and we haven't reached the limit of 2 consecutive proactive messages.
+    if (hoursInactive >= 4 && hoursSinceLastProactive >= 12 && (user.proactiveCount || 0) < 2) {
+      console.log(`✉️ Sending proactive check-in to user ${uid}...`);
+      try {
+        const char = CHARACTERS[user.character] || CHARACTERS.priya;
+        const scen = SCENARIOS[user.scenario] || SCENARIOS.default;
+        
+        // Context-aware prompt to let the character initiate chat
+        const systemInstruction = `[SYSTEM: You haven't chatted with the user in over 4 hours. Send a short, highly seductive, in-character proactive check-in message. Refer to him matching your character (${char.name}) and active scenario (${scen.name}). Keep it under 2 sentences. Do not use generic AI assistant phrases.]`;
+        
+        const proactiveHistory = [...user.history, { role: 'user', content: systemInstruction }];
+        const reply = await askAI(proactiveHistory, { character: user.character, scenario: user.scenario, points: user.points, longTermMemory: user.longTermMemory });
+        
+        await bot.sendMessage(user.chatId, reply);
+        
+        // Reload memory to avoid overwrite issues
+        const freshMem = loadMemory();
+        if (freshMem[uid]) {
+          freshMem[uid].history.push({ role: 'assistant', content: reply });
+          freshMem[uid].lastProactiveTime = now;
+          freshMem[uid].proactiveCount = (freshMem[uid].proactiveCount || 0) + 1; // Increment counter
+          saveMemory(freshMem);
+          console.log(`✉️ Proactive message successfully sent and saved for ${uid}. Consecutive count: ${freshMem[uid].proactiveCount}`);
+        }
+      } catch (err) {
+        console.error(`❌ Failed to send proactive message to ${uid}:`, err.message);
+      }
+    }
+  }
+}, 30 * 60 * 1000); // Every 30 minutes
 
 console.log('🌹 Priya Indestructible is online and fully robust...');
