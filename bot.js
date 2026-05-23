@@ -376,29 +376,23 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
     
     if (config.type === 'sdxl') {
       activeModels = [
+        "Juggernaut XL",
         "AlbedoBase XL 3.1",
         "AlbedoBase XL (SDXL)",
-        "CyberRealistic Pony",
-        "AMPonyXL",
-        "Juggernaut XL",
-        "Pony Diffusion XL",
-        "WAI-NSFW-illustrious-SDXL"
+        "RealVisXL",
+        "CyberRealistic"
       ];
       width = 768;
       height = 1024;
     } else {
       activeModels = [
-        "URPM",
-        "AbsoluteReality",
         "Realistic Vision",
         "EpicRealism",
+        "AbsoluteReality",
         "majicMIX realistic",
         "CyberRealistic",
-        "Photon",
         "ICBINP - I Can't Believe It's Not Photography",
-        "Dreamshaper",
-        "Deliberate",
-        "NeverEnding Dream"
+        "Photon"
       ];
       width = 512;
       height = 768;
@@ -537,13 +531,16 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Character specific identity tags for image generation
   const identityTags = char.identityTags;
 
+  // Anti-cartoon/drawing/anime keywords to force photorealism
+  const antiCartoonNegative = "cartoon, anime, 3d, illustration, drawing, painting, digital art, sketch, cg, 3d render, artwork, canvas, bad photo, cell shaded, anime style, manga, semi-realistic, 3d digital render";
+
   // Base negative prompt keywords to prevent common distortions
-  const baseNSFWNegative = "clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck";
+  const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, ${antiCartoonNegative}`;
 
   // Determine if user requested clothing, and if so, remove it from the negative prompt to allow rendering clothes
   const isClothingRequested = forceDescription ? false : hasClothingRequest(history, visualDesc);
   const activeNegative = isClothingRequested
-    ? "watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck"
+    ? `watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, ${antiCartoonNegative}`
     : baseNSFWNegative;
 
   const qualityTags = "photorealistic, highly detailed, cinematic lighting, sharp focus, 4k, masterpiece, best quality";
