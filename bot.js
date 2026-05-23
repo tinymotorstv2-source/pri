@@ -482,9 +482,9 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
         
-        // If wait time is too high on any check, abort immediately to allow fast fallback
-        if (status.wait_time > 180) {
-          console.log(`⚠️ Queue wait time is too high (${status.wait_time}s). Aborting attempt to allow fallback...`);
+        // Only abort SDXL if wait time remains high (> 300s) after at least 3 polls (giving Horde time to update worker status)
+        if (config.type === 'sdxl' && attempts >= 3 && status.wait_time > 300) {
+          console.log(`⚠️ SDXL queue wait time is too high (${status.wait_time}s). Aborting to allow fallback...`);
           return null;
         }
         
