@@ -282,7 +282,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
   // Pony models require special score tags for best quality
   let finalPrompt = prompt;
   if (config.type === 'sdxl') {
-     finalPrompt = `score_9, score_8_up, score_7_up, score_6_up, source_anime, ${prompt}`;
+     finalPrompt = `score_9, score_8_up, score_7_up, score_6_up, ${prompt}`;
   }
   const fullPrompt = `${finalPrompt} ### ${finalNegative}`;
   
@@ -500,6 +500,8 @@ async function sendPriyaPhoto(chatId, history) {
       retryPrompt = `${visualDesc}, photo of ${priyaIdentity} from behind, bending over, looking back over shoulder smiling, showing bare ass, completely naked, voluptuous, photorealistic, NSFW, explicit`;
     } else if (category === 'breasts') {
       retryPrompt = `${visualDesc}, medium shot of ${priyaIdentity}, looking at camera smiling, showing large breasts, completely naked, photorealistic, NSFW, explicit`;
+    } else if (category === 'pussy') {
+      retryPrompt = `${visualDesc}, explicit close-up shot of crotch, ${priyaIdentity}, legs spread wide open, showing detailed pussy, completely naked, photorealistic, NSFW, explicit`;
     } else {
       retryPrompt = `${visualDesc}, nude photo of ${priyaIdentity}, gorgeous round face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
@@ -538,7 +540,7 @@ bot.on('message', async (msg) => {
   saveMemory(mem);
 
   // IMAGE TRIGGERS
-  if (text.toLowerCase().match(/(photo|pic|dikhao|image|bhejo|shakal|nangi|nude|sex|badan|breast|pussy|gaand|dudh|chut|boobs)/)) {
+  if (text.toLowerCase().match(/(photo|pic|dikhao|image|bhejo|shakal|nangi|nude|sex|badan|breast|pussy|psy|gaand|dudh|chut|boobs|ass|chuchi|fuddi|pichwada)/)) {
     await bot.sendChatAction(chatId, 'upload_photo');
     await bot.sendMessage(chatId, "Ruko jaan, tumhare liye ek special photo bana rahi hoon... 📸🔥");
     await sendPriyaPhoto(chatId, user.history);
