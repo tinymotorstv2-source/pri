@@ -576,12 +576,7 @@ async function generateWithHorde(prompt, negativePrompt, config = { type: 'sdxl'
         const status = checkRes.data;
         console.log(`⏳ Poll ${attempts}: done=${status.done}, wait_time=${status.wait_time}s`);
         
-        // Abort if wait time remains high (> 240s) after at least 3 polls (giving Horde time to update worker status)
-        // But do NOT abort early for 'sd15-fast' since it is the absolute final fallback stage
-        if (config.type !== 'sd15-fast' && attempts >= 3 && status.wait_time > 240) {
-          console.log(`⚠️ ${config.type} queue wait time is too high (${status.wait_time}s). Aborting to allow fallback...`);
-          return null;
-        }
+        // Log wait time but don't abort - let Horde complete naturally for best quality
         
         if (status.done) {
           const resultRes = await axios.get(`${HORDE_BASE}/v2/generate/status/${jobId}`, {
@@ -713,7 +708,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     await bot.sendMessage(chatId, `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`);
     
     console.log(`🎨 Attempt 1: AI Horde (SDXL High-Res)...`);
-    const sdxlConfig = { type: 'sdxl', maxAttempts: 15 };
+    const sdxlConfig = { type: 'sdxl', maxAttempts: 100 };
     if (forceDescription && user.lastGeneratedModel) {
       sdxlConfig.forceModel = user.lastGeneratedModel;
     }
@@ -763,28 +758,12 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       retryPrompt = `${visualDesc}, nude photo of ${identityTags}, gorgeous face, sweet smile, dimples, completely naked, snatched hourglass figure, tiny waist, large breasts, thick voluptuous thighs, wide heavy hips, photorealistic, NSFW, explicit`;
     }
 
-    const sd15Config = { type: 'sd15', maxAttempts: 15 };
+    const sd15Config = { type: 'sd15', maxAttempts: 80 };
     imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15Config);
     
     if (imageBuffer) {
       if (sd15Config.successModel) {
         user.lastGeneratedModel = sd15Config.successModel;
-        saveMemory(mem);
-      }
-      await bot.sendPhoto(chatId, imageBuffer, opts);
-      return;
-    }
-
-    // Attempt 3: Ultra-Fast base model fallback
-    await bot.sendMessage(chatId, `Arey yaar, servers par bohot load hai par main aapko bina photo ke nahi chodungi! Ek super-fast backup engine use kar rahi hoon... bas abhi aayi! 😏⚡📸`);
-    
-    console.log("🔄 Attempt 3: AI Horde (Ultra-Fast Fallback)...");
-    const sd15FastConfig = { type: 'sd15-fast', maxAttempts: 35 };
-    imageBuffer = await generateWithHorde(retryPrompt, negPrompt, sd15FastConfig);
-    
-    if (imageBuffer) {
-      if (sd15FastConfig.successModel) {
-        user.lastGeneratedModel = sd15FastConfig.successModel;
         saveMemory(mem);
       }
       await bot.sendPhoto(chatId, imageBuffer, opts);
