@@ -923,21 +923,34 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const qualityTags = "photorealistic, highly detailed, perfect anatomy, perfect hands, perfect eyes, realistic eyes, cinematic lighting, sharp focus, 4k, masterpiece, best quality, RAW photo, professional photography";
 
-  if (category === 'face') {
-    prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
-    negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
-  } else if (category === 'breasts') {
-    prompt = `${visualDesc}, medium shot, ${identityTags}, showing ${char.breastTags}, bare chest, completely naked, ${char.bodyTags}, ${qualityTags}`;
-    negPrompt = `${activeNegative}, hands near face, legs, feet`;
-  } else if (category === 'ass') {
-    prompt = `${visualDesc}, medium full shot from behind, ${identityTags}, head turned looking back over shoulder towards camera, showing bare ass, ${char.buttTags}, ${char.thighTags}, completely naked, ${qualityTags}`;
-    negPrompt = `${activeNegative}, front view, face facing forward, front torso`;
-  } else if (category === 'pussy') {
-    prompt = `${visualDesc}, explicit close-up shot of crotch, ${identityTags}, explicitly showing detailed pussy, labia, completely naked, ${char.thighTags}, ${qualityTags}`;
-    negPrompt = `${activeNegative}, face, head, upper body`;
+  if (forceDescription) {
+    prompt = `${forceDescription}, ${identityTags}, ${qualityTags}`;
+    if (category === 'pussy') {
+      negPrompt = `${activeNegative}, face, head, upper body, clothes, clothing, bra, panties, underwear, bikini`;
+    } else if (category === 'ass') {
+      negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
+    } else if (category === 'breasts') {
+      negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, panties, underwear, bikini`;
+    } else {
+      negPrompt = activeNegative;
+    }
   } else {
-    prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, showing ${char.breastTags}, completely naked, full body nudity, looking at camera, ${qualityTags}`;
-    negPrompt = activeNegative;
+    if (category === 'face') {
+      prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
+      negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
+    } else if (category === 'breasts') {
+      prompt = `${visualDesc}, medium shot, ${identityTags}, showing ${char.breastTags}, bare chest, completely naked, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
+      negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
+    } else if (category === 'ass') {
+      prompt = `${visualDesc}, medium full shot from behind, ${identityTags}, head turned looking back over shoulder towards camera, showing bare ass, ${char.buttTags}, completely naked, no panties, no underwear, ${char.thighTags}, ${qualityTags}`;
+      negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
+    } else if (category === 'pussy') {
+      prompt = `${visualDesc}, explicit close-up shot of crotch, legs spread wide open, ${identityTags}, explicitly showing detailed shaved pussy, exposed pink labia, completely naked, no panties, no underwear, clean crotch, ${char.thighTags}, ${qualityTags}`;
+      negPrompt = `${activeNegative}, face, head, upper body, clothes, clothing, bra, panties, underwear, bikini`;
+    } else {
+      prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, showing ${char.breastTags}, completely naked, full body nudity, looking at camera, ${qualityTags}`;
+      negPrompt = activeNegative;
+    }
   }
 
   const nakedCaptions = [
@@ -1262,6 +1275,7 @@ bot.on('callback_query', async (callbackQuery) => {
         .replace(/\b(lying on bed|kneeling on bed|bending over|standing|sitting|kneeling|legs spread|legs open|legs spread wide open|legs spread wide)\b/gi, '')
         .replace(/\b(showing ass|showing bare ass|showing pussy|showing detailed pussy|showing bare breasts|showing large breasts|cleavage|bare chest)\b/gi, '')
         .replace(/\b(completely naked|nude|naked)\b/gi, '')
+        .replace(/\b(wearing|wear|clothed|clothes|clothing|outfit|saree|sari|dress|skirt|jeans|top|lingerie|bikini|nighty|gown|suit|salwar|kurti|bra|panties|pant|shirt|t-shirt|panty|kapde|kapda|undergarments|underwear|fabric|lace)\b/gi, '')
         .trim();
       
       // Clean duplicate commas
@@ -1269,31 +1283,31 @@ bot.on('callback_query', async (callbackQuery) => {
 
       if (category === 'ass') {
         actionTxt = `Ruko jaan, ${char.name} piche ghum rahi hai aapke liye... 🍑🔥`;
-        forceDesc = `viewed from behind, bending over, showing bare ass, round voluptuous butt, wide heavy hips, completely naked, ${basePrompt}`;
+        forceDesc = `viewed from behind, bending over, showing bare ass, ${char.buttTags}, completely naked, no panties, no underwear, ${char.thighTags}, ${basePrompt}`;
       } else if (category === 'pussy') {
         actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
-        forceDesc = `explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed detailed pussy, labia, completely naked, ${basePrompt}`;
+        forceDesc = `explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed shaved pussy, exposed pink labia, completely naked, no panties, no underwear, clean crotch, ${char.thighTags}, ${basePrompt}`;
       } else if (category === 'breasts') {
         actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
-        forceDesc = `medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, snatched hourglass figure, ${basePrompt}`;
+        forceDesc = `medium shot, showing ${char.breastTags}, bare chest, completely naked, no bra, no clothes, ${char.bodyTags}, ${basePrompt}`;
       } else if (category === 'face') {
         actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
-        forceDesc = `close-up portrait, gorgeous face, warm sweet smile, dimples, looking directly at camera, ${basePrompt}`;
+        forceDesc = `close-up portrait, ${char.faceTags}, looking directly at camera, ${basePrompt}`;
       }
     } else {
       // Fallback if no last visual description exists
       if (category === 'ass') {
         actionTxt = `Ruko jaan, ${char.name} piche ghum rahi hai aapke liye... 🍑🔥`;
-        forceDesc = "viewed from behind, bending over, showing bare ass, round voluptuous butt, wide heavy hips, completely naked, bedroom";
+        forceDesc = `viewed from behind, bending over, showing bare ass, ${char.buttTags}, completely naked, no panties, no underwear, ${char.thighTags}, bedroom`;
       } else if (category === 'pussy') {
         actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
-        forceDesc = "explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed detailed pussy, labia, completely naked, bedroom";
+        forceDesc = `explicit close-up shot of crotch, legs spread wide open, explicitly showing detailed shaved pussy, exposed pink labia, completely naked, no panties, no underwear, clean crotch, ${char.thighTags}, bedroom`;
       } else if (category === 'breasts') {
         actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
-        forceDesc = "medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, bedroom";
+        forceDesc = `medium shot, showing ${char.breastTags}, bare chest, completely naked, no bra, no clothes, ${char.bodyTags}, bedroom`;
       } else if (category === 'face') {
         actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
-        forceDesc = "close-up portrait, gorgeous face, warm sweet smile, dimples, looking directly at camera, bedroom";
+        forceDesc = `close-up portrait, ${char.faceTags}, looking directly at camera, bedroom`;
       }
     }
 
