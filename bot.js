@@ -8,6 +8,7 @@ const TOKEN = process.env.TELEGRAM_TOKEN;
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const HORDE_API_KEY = process.env.HORDE_API_KEY || '0000000000'; // Anonymous key works too
 const HF_TOKEN = process.env.HF_TOKEN || '';
+const AIRFORCE_API_KEY = process.env.AIRFORCE_API_KEY || '';
 
 const MEMORY_FILE = path.join(__dirname, 'memory.json');
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
@@ -823,6 +824,55 @@ async function generateWithHF(prompt, negativePrompt, category = 'default', char
   return null;
 }
 
+async function generateWithAirforce(prompt, negativePrompt, category = 'default', char = null) {
+  if (!AIRFORCE_API_KEY) {
+    console.log("⚠️ AIRFORCE_API_KEY is not set. Skipping api.airforce generation.");
+    return null;
+  }
+
+  const fluxPrompt = buildFluxPrompt(category, char);
+  const modelName = process.env.AIRFORCE_MODEL || 'z-image';
+  console.log(`🎨 Airforce prompt (${category}): ${fluxPrompt.substring(0, 100)}...`);
+
+  try {
+    console.log(`🎨 Submitting request to api.airforce (Model: ${modelName})...`);
+    const response = await axios.post(
+      'https://api.airforce/v1/images/generations',
+      {
+        model: modelName,
+        prompt: fluxPrompt,
+        size: "768x1024",
+        response_format: "url"
+      },
+      {
+        headers: { 
+          'Authorization': `Bearer ${AIRFORCE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 35000
+      }
+    );
+
+    if (response.data && response.data.data && response.data.data[0]) {
+      const imgData = response.data.data[0];
+      if (imgData.url) {
+        console.log("Image URL from Airforce:", imgData.url.substring(0, 150));
+        const imgRes = await axios.get(imgData.url, { responseType: 'arraybuffer', timeout: 20000 });
+        return Buffer.from(imgRes.data);
+      } else if (imgData.b64_json) {
+        return Buffer.from(imgData.b64_json, 'base64');
+      }
+    } else {
+      console.error("⚠️ api.airforce response format invalid:", JSON.stringify(response.data).substring(0, 300));
+    }
+  } catch (e) {
+    const errMsg = e.response?.data ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
+    console.error("⚠️ api.airforce generation failed:", errMsg);
+  }
+
+  return null;
+}
+
 async function generateWithPollinations(characterId, isClothingRequested) {
   try {
     console.log("🎨 Submitting request to Pollinations.ai (Flux-Realism)...");
@@ -867,26 +917,30 @@ const CHARACTER_STATUS_MESSAGES = {
   priya: {
     initial: `Ruko jaan, tumhare liye ek behad sexy aur nangi photo bana rahi hoon... Sabse best details aur gora badan load ho raha hai, bas 30-40 seconds! 📸🔥🔞`,
     fallback_1: `Jaan, premium server thoda slow chal raha hai, main realistic model pe switch kar rahi hoon taaki jaldi photo aa jaye... Bas thoda sa sabr rakho... 💋`,
-    fallback_2: `Arey jaan, servers bohot heavy hain aaj. Main backup line use kar rahi hoon taaki tumhe zyada intezar na karna pade... Sabse garam photo bhej rahi hoon! 🔥`,
-    fallback_3: `Uff jaan, backup bhi slow hai. Main local server se directly aapke liye ek garam pose select kar rahi hoon... Kuch hi seconds! 😏`
+    fallback_2: `Arey jaan, backup realistic server use kar rahi hoon, bas 10 seconds mein behad garam photo bhejti hoon! 😏🔥`,
+    fallback_3: `Servers bohot heavy hain jaan, main alternative route se photo nikal rahi hoon... Bas thoda sa aur wait karo! 🔥`,
+    fallback_4: `Uff jaan, backup bhi slow hai. Main local server se directly aapke liye ek garam pose select kar rahi hoon... Kuch hi seconds! 😏`
   },
   kavya: {
     initial: `Hold on baby! Tumhare liye ek mast nangi photo clicks kar rahi hoon... Ekdum solid maal load ho raha hai, bas 30-40 secs! 📸😏🔥`,
     fallback_1: `Arey yaar, ye premium line toh slow hai. Main fast wale server pe switch kar rahi hoon taaki instant photo mile. Line pe raho! 😉`,
-    fallback_2: `Poora server lagta hai jam hai! Main backup route se bhej rahi hoon, bas 5-10 seconds baby! 💦`,
-    fallback_3: `Arey baby, backup bhi crash ho gaya. Main local drive se ek super sexy pose fetch kar rahi hoon... bas line par bane raho! 😘`
+    fallback_2: `Arey baby, realistic backup use kar rahi hoon, ekdum solid photo clicks kar rahi hoon... bas ruko thoda! 🔥`,
+    fallback_3: `Poora server lagta hai jam hai! Main alternative route se bhej rahi hoon, bas 5-10 seconds baby! 💦`,
+    fallback_4: `Arey baby, backup bhi crash ho gaya. Main local drive se ek super sexy pose fetch kar rahi hoon... bas line par bane raho! 😘`
   },
   sneha: {
     initial: `Suno na dear, tumhare liye ek behad sharmili aur nangi photo shoot kar rahi hoon... Har ek ang saaf dikhega, thoda sa wait karo na... 🤫🔞`,
     fallback_1: `Lagta hai server bhi hume dekhna chahta hai, thoda slow hai. Main realistic lane pe ja rahi hoon taaki jaldi photo mil jaye dear... 🌹`,
-    fallback_2: `Dear, wait nahi ho raha na? Main fast route se photo bhej rahi hoon taaki hum bina kisi rukawat ke aage badhein... 😏🔥`,
-    fallback_3: `Suno dear, server ne tang kar diya hai. Main direct channel se aapke liye ek behad seductive pose bhej rahi hoon... bas ek pal! 💋`
+    fallback_2: `Dear, realistic backup line check kar rahi hoon taaki jaldi se meri gori jawani dekh sako, bas thoda ruko... 😏🔥`,
+    fallback_3: `Dear, wait nahi ho raha na? Main alternative route se photo bhej rahi hoon taaki hum bina kisi rukawat ke aage badhein... 😏🔥`,
+    fallback_4: `Suno dear, server ne tang kar diya hai. Main direct channel se aapke liye ek behad seductive pose bhej rahi hoon... bas ek pal! 💋`
   },
   savita: {
     initial: `Arey devar ji, ruko! Tumhare liye ekdum garam aur nangi photo bhej rahi hoon... Dekhte hi muth maarne ka mann karega, bas 30 seconds! 🔞💦👅`,
     fallback_1: `Devar ji, premium server toh thak gaya! Main realistic server pe shift kar rahi hoon taaki jaldi se meri gori jawani dekh sako! 😉🔥`,
-    fallback_2: `Uff besharam! Sabr nahi ho raha na? Main backup line use kar rahi hoon, bas thodi der aur devar ji! 💋💦`,
-    fallback_3: `Arey devar ji, backup server bhi garam ho gaya! Main direct fast delivery se aapke liye ekdum sexy lingerie photo bhej rahi hoon... control rakhna! 😉🔥`
+    fallback_2: `Garam devar ji, main backup realistic line check kar rahi hoon, bas 10 seconds mein nangi photo mil jayegi! 😏🔥`,
+    fallback_3: `Uff besharam! Sabr nahi ho raha na? Main alternative backup use kar rahi hoon, bas thodi der aur devar ji! 💋💦`,
+    fallback_4: `Arey devar ji, backup server bhi garam ho gaya! Main direct fast delivery se aapke liye ekdum sexy lingerie photo bhej rahi hoon... control rakhna! 😉🔥`
   }
 };
 
@@ -1018,24 +1072,36 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     successModel = config2.successModel;
   }
 
-  // Stage 3: Hugging Face (Uncensored SDXL)
-  if (!imageBuffer && HF_TOKEN) {
+  // Stage 3: api.airforce (Uncensored Premium SDXL/Flux)
+  if (!imageBuffer && AIRFORCE_API_KEY) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
     }
-    console.log(`🎨 Stage 3: Hugging Face (FLUX.1-schnell)...`);
+    console.log(`🎨 Stage 3: api.airforce...`);
+    imageBuffer = await generateWithAirforce(prompt, negPrompt, category, char);
+    if (imageBuffer) {
+      successModel = process.env.AIRFORCE_MODEL || "z-image";
+    }
+  }
+
+  // Stage 4: Hugging Face (FLUX.1-schnell)
+  if (!imageBuffer && HF_TOKEN) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
+    }
+    console.log(`🎨 Stage 4: Hugging Face (FLUX.1-schnell)...`);
     imageBuffer = await generateWithHF(prompt, negPrompt, category, char);
     if (imageBuffer) {
       successModel = "FLUX.1-schnell";
     }
   }
 
-  // Stage 4: Pollinations (Seductive Lingerie / Saree)
+  // Stage 5: Pollinations (Seductive Lingerie / Saree / Flux fallback)
   if (!imageBuffer) {
     if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_4'));
     }
-    console.log(`🎨 Stage 4: Pollinations.ai (Flux-Realism)...`);
+    console.log(`🎨 Stage 5: Pollinations.ai (Flux-Realism)...`);
     imageBuffer = await generateWithPollinations(characterId, isClothingRequested);
     if (imageBuffer) {
       successModel = "Pollinations_Flux";
