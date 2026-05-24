@@ -743,13 +743,55 @@ async function generateWithHorde(prompt, negativePrompt, config = { group: 'sdxl
   }
 }
 
+const dns = require('dns');
+const https = require('https');
+
+async function resolveHFIP() {
+  // Try Google DNS over HTTPS
+  try {
+    const res = await axios.get('https://dns.google/resolve?name=api-inference.huggingface.co&type=A', { timeout: 5000 });
+    if (res.data && res.data.Answer) {
+      const answers = res.data.Answer.filter(ans => ans.type === 1); // A record
+      if (answers.length > 0) {
+        const ip = answers[Math.floor(Math.random() * answers.length)].data;
+        console.log(`📡 DoH (Google) resolved api-inference.huggingface.co to: ${ip}`);
+        return ip;
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ Google DoH failed:", err.message);
+  }
+
+  // Try Cloudflare DNS over HTTPS
+  try {
+    const res = await axios.get('https://cloudflare-dns.com/dns-query?name=api-inference.huggingface.co&type=A', {
+      headers: { 'Accept': 'application/dns-json' },
+      timeout: 5000
+    });
+    if (res.data && res.data.Answer) {
+      const answers = res.data.Answer.filter(ans => ans.type === 1); // A record
+      if (answers.length > 0) {
+        const ip = answers[Math.floor(Math.random() * answers.length)].data;
+        console.log(`📡 DoH (Cloudflare) resolved api-inference.huggingface.co to: ${ip}`);
+        return ip;
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ Cloudflare DoH failed:", err.message);
+  }
+  
+  return null;
+}
+
 async function generateWithHF(prompt, negativePrompt) {
   if (!HF_TOKEN) {
     console.log("⚠️ HF_TOKEN is not set. Skipping Hugging Face generation.");
     return null;
   }
   
-  // Try Stage A: RealVisXL_V4.0 via classic Inference URL (high quality SDXL)
+  let successBuffer = null;
+
+  // Try Stage A1: RealVisXL_V4.0 via standard System DNS
   try {
     console.log("🎨 Submitting request to Hugging Face (RealVisXL)...");
     const response = await axios.post(
@@ -776,11 +818,67 @@ async function generateWithHF(prompt, negativePrompt) {
     const buffer = Buffer.from(response.data);
     const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
     if (isImage) {
-      console.log("🎉 Hugging Face RealVisXL image generated successfully!");
+      console.log("🎉 Hugging Face RealVisXL image generated successfully (System DNS)!");
       return buffer;
     }
   } catch (e) {
-    console.warn("⚠️ HF RealVisXL failed, trying fallback to HF Router with Flux-Schnell. Reason:", e.message);
+    console.warn("⚠️ HF RealVisXL (System DNS) failed. Reason:", e.message);
+    
+    // Try Stage A2: DNS over HTTPS resolution fallback for RealVisXL (bypasses Render's internal DNS errors)
+    if (e.code === 'ENOTFOUND' || e.message.includes('ENOTFOUND') || e.message.includes('EAI_AGAIN')) {
+      console.log("🔍 Attempting DNS-over-HTTPS (DoH) resolution fallback for Hugging Face...");
+      const ip = await resolveHFIP();
+      if (ip) {
+        try {
+          console.log(`🎨 Submitting request to Hugging Face (RealVisXL) via DoH IP: ${ip}...`);
+          const agent = new https.Agent({
+            servername: 'api-inference.huggingface.co',
+            lookup: (hostname, options, callback) => {
+              if (hostname === 'api-inference.huggingface.co') {
+                if (options.all) {
+                  callback(null, [{ address: ip, family: 4 }]);
+                } else {
+                  callback(null, ip, 4);
+                }
+              } else {
+                dns.lookup(hostname, options, callback);
+              }
+            }
+          });
+
+          const response = await axios.post(
+            'https://api-inference.huggingface.co/models/SG161222/RealVisXL_V4.0',
+            {
+              inputs: prompt,
+              parameters: { 
+                negative_prompt: negativePrompt, 
+                width: 512, 
+                height: 768,
+                num_inference_steps: 25
+              },
+              options: {
+                wait_for_model: true
+              }
+            },
+            {
+              headers: { Authorization: `Bearer ${HF_TOKEN}` },
+              responseType: 'arraybuffer',
+              httpsAgent: agent,
+              timeout: 60000
+            }
+          );
+
+          const buffer = Buffer.from(response.data);
+          const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
+          if (isImage) {
+            console.log("🎉 Hugging Face RealVisXL image generated successfully (DoH DNS Bypass)!");
+            return buffer;
+          }
+        } catch (dohErr) {
+          console.warn("⚠️ HF RealVisXL via DoH IP failed. Reason:", dohErr.message);
+        }
+      }
+    }
   }
 
   // Try Stage B: FLUX.1-schnell via new Router URL (allowed by sandbox DNS)
