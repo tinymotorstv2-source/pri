@@ -788,14 +788,22 @@ async function generateWithHF(prompt, negativePrompt, category = 'default', char
 
   // Build a SHORT, focused Flux-optimized prompt instead of transforming the long SD prompt
   const fluxPrompt = buildFluxPrompt(category, char);
-  console.log(`🎨 Flux prompt (${category}): ${fluxPrompt.substring(0, 100)}...`);
+  const seed = Math.floor(Math.random() * 1000000);
+  console.log(`🎨 Flux prompt (${category}) with seed ${seed}: ${fluxPrompt.substring(0, 100)}...`);
 
   try {
     console.log("🎨 Submitting request to Hugging Face Router (FLUX.1-schnell)...");
     const response = await axios.post(
       'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
       {
-        inputs: fluxPrompt
+        inputs: fluxPrompt,
+        parameters: {
+          seed: seed
+        },
+        options: {
+          use_cache: false,
+          wait_for_model: true
+        }
       },
       {
         headers: { 
@@ -905,18 +913,20 @@ async function generateWithAirforce(prompt, negativePrompt, category = 'default'
   return null;
 }
 
-async function generateWithPollinations(characterId, isClothingRequested) {
+async function generateWithPollinations(category, char, isClothingRequested) {
   try {
-    console.log("🎨 Submitting request to Pollinations.ai (Flux-Realism)...");
+    console.log(`🎨 Submitting request to Pollinations.ai (Flux-Realism, category: ${category})...`);
     const seed = Math.floor(Math.random() * 100000000);
-    const char = CHARACTERS[characterId] || CHARACTERS.priya;
     
-    const poseTags = isClothingRequested 
-      ? "wearing a gorgeous traditional Indian saree, looking extremely seductive, looking at camera" 
-      : "wearing extremely skimpy lace lingerie, seductive pose, cleavage, looking at camera";
-      
-    const prompt = `photo of a beautiful curvy ${char.name}, mature and gorgeous Indian woman, ${char.identityTags}, ${poseTags}, bedroom, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece`;
+    let prompt;
+    if (isClothingRequested) {
+      const poseTags = "wearing a gorgeous traditional Indian Saree, looking extremely seductive, looking at camera";
+      prompt = `photo of a beautiful curvy ${char.name}, mature and gorgeous Indian woman, ${char.identityTags}, ${poseTags}, bedroom, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece`;
+    } else {
+      prompt = buildFluxPrompt(category, char);
+    }
     
+    console.log(`🎨 Pollinations prompt: ${prompt.substring(0, 100)}...`);
     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=768&height=1024&nologo=true&model=flux`;
     
     const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 25000 });
@@ -1073,29 +1083,29 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ NEW PRIORITY PIPELINE: Airforce (fastest + uncensored) → HF → Horde → Pollinations ═══
+  // ═══ NEW PRIORITY PIPELINE: Hugging Face (Fast + Uncensored) → Pollinations → Horde → Airforce ═══
 
-  // Stage 1: api.airforce (FASTEST, Uncensored, z-image + flux-2-dev)
+  // Stage 1: Hugging Face (FLUX.1-schnell — FAST, uncensored, un-cached)
   let imageBuffer = null;
   let successModel = null;
 
-  if (AIRFORCE_API_KEY) {
-    console.log(`🎨 Stage 1: api.airforce (z-image → flux-2-dev)...`);
-    imageBuffer = await generateWithAirforce(prompt, negPrompt, category, char);
-    if (imageBuffer) {
-      successModel = "Airforce_z-image";
-    }
-  }
-
-  // Stage 2: Hugging Face (FLUX.1-schnell — fast, good quality, sometimes censored)
-  if (!imageBuffer && HF_TOKEN) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
-    }
-    console.log(`🎨 Stage 2: Hugging Face (FLUX.1-schnell)...`);
+  if (HF_TOKEN) {
+    console.log(`🎨 Stage 1: Hugging Face (FLUX.1-schnell)...`);
     imageBuffer = await generateWithHF(prompt, negPrompt, category, char);
     if (imageBuffer) {
       successModel = "FLUX.1-schnell";
+    }
+  }
+
+  // Stage 2: Pollinations (Flux-Realism — fast, uncensored fallback)
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+    }
+    console.log(`🎨 Stage 2: Pollinations.ai (Flux-Realism)...`);
+    imageBuffer = await generateWithPollinations(category, char, isClothingRequested);
+    if (imageBuffer) {
+      successModel = "Pollinations_Flux";
     }
   }
 
@@ -1134,15 +1144,15 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     successModel = config2.successModel;
   }
 
-  // Stage 5: Pollinations (Last resort — Flux-Realism, sometimes censored)
-  if (!imageBuffer) {
+  // Stage 5: api.airforce (Last resort — rate-limited & censored z-image)
+  if (!imageBuffer && AIRFORCE_API_KEY) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_4'));
     }
-    console.log(`🎨 Stage 5: Pollinations.ai (Flux-Realism)...`);
-    imageBuffer = await generateWithPollinations(characterId, isClothingRequested);
+    console.log(`🎨 Stage 5: api.airforce (z-image → flux-2-dev)...`);
+    imageBuffer = await generateWithAirforce(prompt, negPrompt, category, char);
     if (imageBuffer) {
-      successModel = "Pollinations_Flux";
+      successModel = "Airforce_z-image";
     }
   }
 
