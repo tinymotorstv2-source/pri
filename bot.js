@@ -830,44 +830,76 @@ async function generateWithAirforce(prompt, negativePrompt, category = 'default'
     return null;
   }
 
-  const fluxPrompt = buildFluxPrompt(category, char);
-  const modelName = process.env.AIRFORCE_MODEL || 'z-image';
-  console.log(`🎨 Airforce prompt (${category}): ${fluxPrompt.substring(0, 100)}...`);
+  // Try multiple models in order: z-image (best uncensored NSFW) → flux-2-dev (high quality)
+  const modelsToTry = ['z-image', 'flux-2-dev'];
+  const maxRetries = 3; // retries per model for rate limiting
 
-  try {
-    console.log(`🎨 Submitting request to api.airforce (Model: ${modelName})...`);
-    const response = await axios.post(
-      'https://api.airforce/v1/images/generations',
-      {
-        model: modelName,
-        prompt: fluxPrompt,
-        size: "768x1024",
-        response_format: "url"
-      },
-      {
-        headers: { 
-          'Authorization': `Bearer ${AIRFORCE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 35000
-      }
-    );
+  for (const modelName of modelsToTry) {
+    // z-image handles detailed prompts well; flux models need shorter prompts
+    const usePrompt = modelName.startsWith('flux') ? buildFluxPrompt(category, char) : prompt;
+    console.log(`🎨 Airforce trying model: ${modelName} (${category}): ${usePrompt.substring(0, 100)}...`);
 
-    if (response.data && response.data.data && response.data.data[0]) {
-      const imgData = response.data.data[0];
-      if (imgData.url) {
-        console.log("Image URL from Airforce:", imgData.url.substring(0, 150));
-        const imgRes = await axios.get(imgData.url, { responseType: 'arraybuffer', timeout: 20000 });
-        return Buffer.from(imgRes.data);
-      } else if (imgData.b64_json) {
-        return Buffer.from(imgData.b64_json, 'base64');
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        if (retry > 0) {
+          const waitMs = Math.min(2000 * Math.pow(2, retry - 1), 8000);
+          console.log(`⏳ Airforce rate limit retry ${retry}/${maxRetries}, waiting ${waitMs}ms...`);
+          await new Promise(r => setTimeout(r, waitMs));
+        }
+
+        console.log(`🎨 Submitting request to api.airforce (Model: ${modelName}, attempt ${retry + 1})...`);
+        const response = await axios.post(
+          'https://api.airforce/v1/images/generations',
+          {
+            model: modelName,
+            prompt: usePrompt,
+            size: "768x1024",
+            response_format: "url"
+          },
+          {
+            headers: { 
+              'Authorization': `Bearer ${AIRFORCE_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 45000
+          }
+        );
+
+        if (response.data && response.data.data && response.data.data[0]) {
+          const imgData = response.data.data[0];
+          if (imgData.url) {
+            console.log(`🎉 Airforce ${modelName} image URL:`, imgData.url.substring(0, 150));
+            const imgRes = await axios.get(imgData.url, { responseType: 'arraybuffer', timeout: 25000 });
+            const buffer = Buffer.from(imgRes.data);
+            // Verify it's actually an image
+            const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
+            if (isImage && buffer.length > 5000) {
+              console.log(`🎉 Airforce ${modelName} image generated successfully! (${buffer.length} bytes)`);
+              return buffer;
+            } else {
+              console.error(`⚠️ Airforce ${modelName} returned invalid image data (${buffer.length} bytes)`);
+            }
+          } else if (imgData.b64_json) {
+            const buffer = Buffer.from(imgData.b64_json, 'base64');
+            console.log(`🎉 Airforce ${modelName} image generated (base64)! (${buffer.length} bytes)`);
+            return buffer;
+          }
+        } else {
+          console.error(`⚠️ Airforce ${modelName} response format invalid:`, JSON.stringify(response.data).substring(0, 300));
+        }
+        break; // Success or invalid format — don't retry, move to next model
+      } catch (e) {
+        const status = e.response?.status;
+        const errMsg = e.response?.data ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
+        console.error(`⚠️ Airforce ${modelName} attempt ${retry + 1} failed (HTTP ${status}):`, errMsg);
+        
+        // Only retry on rate limit (429), not other errors
+        if (status === 429 && retry < maxRetries - 1) {
+          continue; // Will wait and retry
+        }
+        break; // Other error — move to next model
       }
-    } else {
-      console.error("⚠️ api.airforce response format invalid:", JSON.stringify(response.data).substring(0, 300));
     }
-  } catch (e) {
-    const errMsg = e.response?.data ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
-    console.error("⚠️ api.airforce generation failed:", errMsg);
   }
 
   return null;
@@ -1041,62 +1073,68 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // Stage 1: SDXL/Pony/Illustrious
-  console.log(`🎨 Stage 1: AI Horde (SDXL/Pony/Illustrious)...`);
-  const config1 = {
-    group: 'sdxl_group',
-    isClothingRequested,
-    abortIfSlow: true,
-    maxAttempts: 15
-  };
-  if (forceDescription && user.lastGeneratedModel) {
-    config1.forceModel = user.lastGeneratedModel;
-  }
-  
-  let imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
-  let successModel = config1.successModel;
+  // ═══ NEW PRIORITY PIPELINE: Airforce (fastest + uncensored) → HF → Horde → Pollinations ═══
 
-  // Stage 2: SD 1.5 Realistic
-  if (!imageBuffer) {
+  // Stage 1: api.airforce (FASTEST, Uncensored, z-image + flux-2-dev)
+  let imageBuffer = null;
+  let successModel = null;
+
+  if (AIRFORCE_API_KEY) {
+    console.log(`🎨 Stage 1: api.airforce (z-image → flux-2-dev)...`);
+    imageBuffer = await generateWithAirforce(prompt, negPrompt, category, char);
+    if (imageBuffer) {
+      successModel = "Airforce_z-image";
+    }
+  }
+
+  // Stage 2: Hugging Face (FLUX.1-schnell — fast, good quality, sometimes censored)
+  if (!imageBuffer && HF_TOKEN) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    console.log(`🎨 Stage 2: AI Horde (SD 1.5 Realistic)...`);
-    const config2 = {
-      group: 'sd15_group',
-      isClothingRequested,
-      abortIfSlow: true,
-      maxAttempts: 15
-    };
-    imageBuffer = await generateWithHorde(prompt, negPrompt, config2);
-    successModel = config2.successModel;
-  }
-
-  // Stage 3: api.airforce (Uncensored Premium SDXL/Flux)
-  if (!imageBuffer && AIRFORCE_API_KEY) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
-    }
-    console.log(`🎨 Stage 3: api.airforce...`);
-    imageBuffer = await generateWithAirforce(prompt, negPrompt, category, char);
-    if (imageBuffer) {
-      successModel = process.env.AIRFORCE_MODEL || "z-image";
-    }
-  }
-
-  // Stage 4: Hugging Face (FLUX.1-schnell)
-  if (!imageBuffer && HF_TOKEN) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
-    }
-    console.log(`🎨 Stage 4: Hugging Face (FLUX.1-schnell)...`);
+    console.log(`🎨 Stage 2: Hugging Face (FLUX.1-schnell)...`);
     imageBuffer = await generateWithHF(prompt, negPrompt, category, char);
     if (imageBuffer) {
       successModel = "FLUX.1-schnell";
     }
   }
 
-  // Stage 5: Pollinations (Seductive Lingerie / Saree / Flux fallback)
+  // Stage 3: AI Horde (SDXL/Pony — good uncensored, but SLOW)
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
+    }
+    console.log(`🎨 Stage 3: AI Horde (SDXL/Pony/Illustrious)...`);
+    const config1 = {
+      group: 'sdxl_group',
+      isClothingRequested,
+      abortIfSlow: true,
+      maxAttempts: 12
+    };
+    if (forceDescription && user.lastGeneratedModel) {
+      config1.forceModel = user.lastGeneratedModel;
+    }
+    imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
+    successModel = config1.successModel;
+  }
+
+  // Stage 4: AI Horde SD 1.5 Realistic (slower fallback)
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
+    }
+    console.log(`🎨 Stage 4: AI Horde (SD 1.5 Realistic)...`);
+    const config2 = {
+      group: 'sd15_group',
+      isClothingRequested,
+      abortIfSlow: true,
+      maxAttempts: 12
+    };
+    imageBuffer = await generateWithHorde(prompt, negPrompt, config2);
+    successModel = config2.successModel;
+  }
+
+  // Stage 5: Pollinations (Last resort — Flux-Realism, sometimes censored)
   if (!imageBuffer) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_4'));
