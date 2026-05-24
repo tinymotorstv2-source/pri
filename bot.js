@@ -743,74 +743,51 @@ async function generateWithHorde(prompt, negativePrompt, config = { group: 'sdxl
   }
 }
 
-// ─── FLUX PROMPT TRANSFORMER ──────────────────────────────────────────────────
-// Flux's T5 text encoder has hard alignment filters. Explicit anatomical terms
-// trigger censorship (renders panties/underwear) or anatomical distortion (broken limbs).
-// This transformer converts explicit SD-style prompts into Flux-safe euphemisms
-// that produce identical uncensored results without triggering the filter.
-function transformPromptForFlux(sdPrompt) {
-  let p = sdPrompt;
+// ─── FLUX-OPTIMIZED PROMPT BUILDER ───────────────────────────────────────────
+// Flux-schnell uses only 4 inference steps. It CANNOT handle long complex prompts.
+// Long prompts with identity tags, face descriptions, "perfect hands/eyes" etc.
+// cause Flux to render random body parts (hands in crotch shots, extra limbs).
+// Solution: Build SHORT, focused, category-specific prompts (~30-50 words max).
+// Tested & proven: simple focused prompts produce perfect anatomy every time.
+function buildFluxPrompt(category, char) {
+  // Extract skin tone from character identity tags
+  const skinMatch = char?.identityTags?.match(/(extremely fair|very fair|fair|milky white|gori|dusky|wheatish)/i);
+  const skinTone = skinMatch ? skinMatch[0] : 'smooth';
+  const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
+  const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
-  // Replace explicit genital/crotch terms with euphemisms
-  p = p.replace(/\bexplicit(ly)?\s+showing\s+detailed\s+shaved\s+pussy,?\s*exposed\s+pink\s+labia\b/gi,
-    'showing bare intimate skin between thighs, detailed natural skin folds and texture');
-  p = p.replace(/\bexplicit(ly)?\s+showing\s+detailed\s+detailed\s+pussy,?\s*labia\b/gi,
-    'showing bare intimate skin between thighs, detailed natural skin folds and texture');
-  p = p.replace(/\bexplicit(ly)?\s+showing\s+detailed\s+pussy\b/gi,
-    'showing bare intimate skin between thighs, detailed skin texture');
-  p = p.replace(/\bshowing\s+detailed\s+pussy,?\s*crotch\s+focus\b/gi,
-    'showing bare skin between thighs, intimate close view, detailed skin texture');
-  p = p.replace(/\bexposed\s+pink\s+labia\b/gi, 'detailed natural skin folds');
-  p = p.replace(/\bshaved\s+pussy\b/gi, 'bare smooth intimate skin');
-  p = p.replace(/\bdetailed\s+pussy\b/gi, 'detailed bare intimate skin');
-  p = p.replace(/\bpussy\b/gi, 'bare intimate area');
-  p = p.replace(/\blabia\b/gi, 'natural skin folds');
-  p = p.replace(/\bvulva\b/gi, 'bare intimate skin');
-  p = p.replace(/\bcrotch\s+focus\b/gi, 'intimate close view between thighs');
-  p = p.replace(/\bcrotch\b/gi, 'area between thighs');
-  p = p.replace(/\bclean\s+crotch\b/gi, 'clean smooth skin between legs');
+  const age = char?.age || 30;
+  const bodyType = age >= 35 ? 'mature curvy' : (age <= 25 ? 'young slim' : 'attractive curvy');
   
-  // Replace explicit body terms with natural alternatives
-  p = p.replace(/\bshowing\s+bare\s+ass\b/gi, 'showing bare backside from behind');
-  p = p.replace(/\bbare\s+ass\b/gi, 'bare round backside');
-  p = p.replace(/\bshowing\s+ass\b/gi, 'showing backside from behind');
-  p = p.replace(/\bbuttocks\b/gi, 'round backside curves');
-  p = p.replace(/\bbutt\b/gi, 'backside');
-  
-  // Replace breast terms with natural alternatives  
-  p = p.replace(/\bdetailed\s+nipples\b/gi, 'natural chest details');
-  p = p.replace(/\bnipples\b/gi, 'natural details');
-  p = p.replace(/\bbare\s+chest\b/gi, 'completely bare upper body');
-  
-  // Remove negative-prompt style tags that don't work in Flux (it's single-prompt)
-  p = p.replace(/\bno\s+panties,?\s*/gi, '');
-  p = p.replace(/\bno\s+underwear,?\s*/gi, '');
-  p = p.replace(/\bno\s+bra,?\s*/gi, '');
-  p = p.replace(/\bno\s+clothes,?\s*/gi, '');
-  
-  // Add Flux-specific reinforcements
-  if (p.match(/spread|between\s+thighs|intimate/i)) {
-    p += ', bare skin, no fabric, no clothing anywhere, completely nude, clean shaved smooth skin';
+  switch (category) {
+    case 'pussy':
+      // PROVEN WORKING: Short focused intimate prompt - NO face/identity/hands tags
+      return `intimate close-up photo of bare skin between legs, ${bodyType} Indian woman, legs spread wide open, detailed skin texture and natural folds, completely naked, ${skinTone} skin, clean shaved smooth skin, soft natural thighs, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
+    
+    case 'ass':
+      return `photo of ${bodyType} Indian woman viewed from behind, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+    
+    case 'breasts':
+      return `photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing bare chest, full natural curves, completely naked upper body, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+    
+    case 'face':
+      return `close-up portrait photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, looking at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
+    
+    default:
+      // Full body
+      return `full body photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, completely naked, showing full nude body, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
   }
-  if (p.match(/backside|behind|bending/i)) {
-    p += ', bare skin, completely nude, no fabric, no clothing anywhere';
-  }
-  
-  // Clean up double commas and whitespace
-  p = p.replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
-  
-  return p;
 }
 
-async function generateWithHF(prompt, negativePrompt) {
+async function generateWithHF(prompt, negativePrompt, category = 'default', char = null) {
   if (!HF_TOKEN) {
     console.log("⚠️ HF_TOKEN is not set. Skipping Hugging Face generation.");
     return null;
   }
 
-  // Transform the SD-style prompt to Flux-safe euphemisms
-  const fluxPrompt = transformPromptForFlux(prompt);
-  console.log(`🎨 Flux prompt (transformed): ${fluxPrompt.substring(0, 120)}...`);
+  // Build a SHORT, focused Flux-optimized prompt instead of transforming the long SD prompt
+  const fluxPrompt = buildFluxPrompt(category, char);
+  console.log(`🎨 Flux prompt (${category}): ${fluxPrompt.substring(0, 100)}...`);
 
   try {
     console.log("🎨 Submitting request to Hugging Face Router (FLUX.1-schnell)...");
@@ -1047,7 +1024,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
     }
     console.log(`🎨 Stage 3: Hugging Face (FLUX.1-schnell)...`);
-    imageBuffer = await generateWithHF(prompt, negPrompt);
+    imageBuffer = await generateWithHF(prompt, negPrompt, category, char);
     if (imageBuffer) {
       successModel = "FLUX.1-schnell";
     }
