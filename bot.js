@@ -748,6 +748,8 @@ async function generateWithHF(prompt, negativePrompt) {
     console.log("⚠️ HF_TOKEN is not set. Skipping Hugging Face generation.");
     return null;
   }
+  
+  // Try Stage A: RealVisXL_V4.0 via classic Inference URL (high quality SDXL)
   try {
     console.log("🎨 Submitting request to Hugging Face (RealVisXL)...");
     const response = await axios.post(
@@ -771,16 +773,45 @@ async function generateWithHF(prompt, negativePrompt) {
     const buffer = Buffer.from(response.data);
     const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
     if (isImage) {
-      console.log("🎉 Hugging Face image generated successfully!");
+      console.log("🎉 Hugging Face RealVisXL image generated successfully!");
       return buffer;
-    } else {
-      console.error("⚠️ HF response is not a valid image:", buffer.toString('utf8').substring(0, 200));
-      return null;
     }
   } catch (e) {
-    console.error("⚠️ HF generation failed:", e.response?.data ? Buffer.from(e.response.data).toString('utf8') : e.message);
-    return null;
+    console.warn("⚠️ HF RealVisXL failed, trying fallback to HF Router with Flux-Schnell. Reason:", e.message);
   }
+
+  // Try Stage B: FLUX.1-schnell via new Router URL (allowed by sandbox DNS)
+  try {
+    console.log("🎨 Submitting request to Hugging Face Router (FLUX.1-schnell)...");
+    const response = await axios.post(
+      'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
+      {
+        inputs: prompt
+      },
+      {
+        headers: { 
+          Authorization: `Bearer ${HF_TOKEN}`,
+          Accept: 'image/png'
+        },
+        responseType: 'arraybuffer',
+        timeout: 25000
+      }
+    );
+
+    const buffer = Buffer.from(response.data);
+    const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
+    if (isImage) {
+      console.log("🎉 Hugging Face Router FLUX.1-schnell image generated successfully!");
+      return buffer;
+    } else {
+      console.error("⚠️ HF Router response was not a valid image.");
+    }
+  } catch (e) {
+    const errMsg = e.response?.data ? Buffer.from(e.response.data).toString('utf8').substring(0, 200) : e.message;
+    console.error("⚠️ HF Router generation failed:", errMsg);
+  }
+
+  return null;
 }
 
 async function generateWithPollinations(characterId, isClothingRequested) {
