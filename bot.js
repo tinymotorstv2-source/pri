@@ -398,16 +398,16 @@ Rules:
     // 100% Foolproof local regex fallback parser based on recent user/assistant keywords
     const recentTxts = history.slice(-4).map(h => h.content.toLowerCase()).join(" ");
     
-    if (recentTxts.match(/(gaand|ass|butt|behind|back|hips|pichwada|bund|bum)/)) {
+    if (recentTxts.match(/\b(gaand|ass|butt|behind|back|hips|pichwada|bund|bum|backside)\b/i)) {
       return "viewed from behind, bending over, showing bare round backside, wide heavy hips, thick voluptuous thighs, completely naked, soft warm bedroom lighting";
     }
-    if (recentTxts.match(/(chut|pussy|psy|pusi|phudi|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo|chudai)/)) {
+    if (recentTxts.match(/\b(chut|pussy|psy|pusi|phudi|vulva|yoni|spread|choot|choon|fuddi|taang|kholo|chudai)\b|legs\s+open|legs\s+spread/i)) {
       return "intimate close-up photo, lying on bed, legs spread wide open, completely naked, bare skin between thighs, detailed natural skin texture, soft warm bedroom lighting";
     }
-    if (recentTxts.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)/)) {
+    if (recentTxts.match(/\b(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)\b/i)) {
       return "close-up shot, showing large natural breasts, detailed nipples, cleavage, completely naked, bedroom";
     }
-    if (recentTxts.match(/(face|shakal|face portrait|portrait|smile|cheeks|muh|chehra)/)) {
+    if (recentTxts.match(/\b(face|shakal|portrait|smile|cheeks|muh|chehra)\b|face\s+portrait/i)) {
       return "close-up portrait, beautiful round face, sweet smile, dimpled cheeks, looking at camera, bedroom";
     }
     
@@ -426,16 +426,16 @@ function getFocusCategory(history, tags) {
   const recentTxts = history.slice(-4).map(h => h.content.toLowerCase()).join(" ");
   const combined = (recentTxts + " " + (tags || "")).toLowerCase();
   
-  if (combined.match(/(gaand|ass|butt|behind|back|hips|buttocks|pichwada|bund|bum)/)) {
+  if (combined.match(/\b(gaand|ass|butt|behind|back|hips|buttocks|pichwada|bund|bum|backside)\b/i)) {
     return 'ass';
   }
-  if (combined.match(/(chut|pussy|psy|pusi|phudi|vulva|yoni|spread|legs open|legs spread|choot|choon|fuddi|taang|kholo|chudai)/)) {
+  if (combined.match(/\b(chut|pussy|psy|pusi|phudi|vulva|yoni|spread|choot|choon|fuddi|taang|kholo|chudai)\b|legs\s+open|legs\s+spread/i)) {
     return 'pussy';
   }
-  if (combined.match(/(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)/)) {
+  if (combined.match(/\b(dudh|breast|boobs|cleavage|chest|nipples|bobs|dudhe|chuchi|mumme|boobe)\b/i)) {
     return 'breasts';
   }
-  if (combined.match(/(face|shakal|face portrait|portrait|smile|cheeks|muh|chehra)/)) {
+  if (combined.match(/\b(face|shakal|portrait|smile|cheeks|muh|chehra)\b|face\s+portrait/i)) {
     return 'face';
   }
   return 'default';
