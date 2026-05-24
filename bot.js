@@ -761,12 +761,15 @@ async function generateWithHF(prompt, negativePrompt) {
           width: 512, 
           height: 768,
           num_inference_steps: 25
+        },
+        options: {
+          wait_for_model: true
         }
       },
       {
         headers: { Authorization: `Bearer ${HF_TOKEN}` },
         responseType: 'arraybuffer',
-        timeout: 25000
+        timeout: 60000
       }
     );
     
