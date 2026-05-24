@@ -762,8 +762,8 @@ function buildFluxPrompt(category, char) {
   
   switch (category) {
     case 'pussy':
-      // PROVEN WORKING on FLUX: explicit vaginal area tags for anatomical accuracy
-      return `extreme close-up photo of spread legs, detailed shaved pussy, showing vulva, bare crotch, completely naked, ${bodyType} Indian woman, ${skinTone} skin, soft natural thighs, lying on bed, soft bedroom lighting, photorealistic, RAW photo, masterpiece`;
+      // PROVEN WORKING on FLUX: Short, focused vaginal area tags to prevent weird limbs/anatomy artifacts
+      return `extreme close-up photo of spread legs, detailed shaved pussy, showing vulva, bare crotch, completely naked, lying on bed, soft bedroom lighting, photorealistic, RAW photo, masterpiece`;
     
     case 'ass':
       return `photo of ${bodyType} Indian woman viewed from behind, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
@@ -1083,77 +1083,38 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ NEW PRIORITY PIPELINE: Hugging Face (Fast + Uncensored) → Pollinations → Horde → Airforce ═══
-
-  // Stage 1: Hugging Face (FLUX.1-schnell — FAST, uncensored, un-cached)
+  // ═══ ONLY AI HORDE PIPELINE (100% Uncensored community models) ═══
   let imageBuffer = null;
   let successModel = null;
 
-  if (HF_TOKEN) {
-    console.log(`🎨 Stage 1: Hugging Face (FLUX.1-schnell)...`);
-    imageBuffer = await generateWithHF(prompt, negPrompt, category, char);
-    if (imageBuffer) {
-      successModel = "FLUX.1-schnell";
-    }
+  // Stage 1: AI Horde (SDXL/Pony/Illustrious — Premium Uncensored)
+  console.log(`🎨 Stage 1: AI Horde (SDXL/Pony/Illustrious)...`);
+  const config1 = {
+    group: 'sdxl_group',
+    isClothingRequested,
+    abortIfSlow: false,
+    maxAttempts: 35
+  };
+  if (forceDescription && user.lastGeneratedModel) {
+    config1.forceModel = user.lastGeneratedModel;
   }
+  imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
+  successModel = config1.successModel;
 
-  // Stage 2: Pollinations (Flux-Realism — fast, uncensored fallback)
+  // Stage 2: AI Horde (SD 1.5 Realistic — Fallback)
   if (!imageBuffer) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    console.log(`🎨 Stage 2: Pollinations.ai (Flux-Realism)...`);
-    imageBuffer = await generateWithPollinations(category, char, isClothingRequested);
-    if (imageBuffer) {
-      successModel = "Pollinations_Flux";
-    }
-  }
-
-  // Stage 3: AI Horde (SDXL/Pony — good uncensored, but SLOW)
-  if (!imageBuffer) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
-    }
-    console.log(`🎨 Stage 3: AI Horde (SDXL/Pony/Illustrious)...`);
-    const config1 = {
-      group: 'sdxl_group',
-      isClothingRequested,
-      abortIfSlow: true,
-      maxAttempts: 12
-    };
-    if (forceDescription && user.lastGeneratedModel) {
-      config1.forceModel = user.lastGeneratedModel;
-    }
-    imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
-    successModel = config1.successModel;
-  }
-
-  // Stage 4: AI Horde SD 1.5 Realistic (slower fallback)
-  if (!imageBuffer) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
-    }
-    console.log(`🎨 Stage 4: AI Horde (SD 1.5 Realistic)...`);
+    console.log(`🎨 Stage 2: AI Horde (SD 1.5 Realistic)...`);
     const config2 = {
       group: 'sd15_group',
       isClothingRequested,
-      abortIfSlow: true,
-      maxAttempts: 12
+      abortIfSlow: false,
+      maxAttempts: 30
     };
     imageBuffer = await generateWithHorde(prompt, negPrompt, config2);
     successModel = config2.successModel;
-  }
-
-  // Stage 5: api.airforce (Last resort — rate-limited & censored z-image)
-  if (!imageBuffer && AIRFORCE_API_KEY) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_4'));
-    }
-    console.log(`🎨 Stage 5: api.airforce (z-image → flux-2-dev)...`);
-    imageBuffer = await generateWithAirforce(prompt, negPrompt, category, char);
-    if (imageBuffer) {
-      successModel = "Airforce_z-image";
-    }
   }
 
   const opts = {
