@@ -762,8 +762,8 @@ function buildFluxPrompt(category, char) {
   
   switch (category) {
     case 'pussy':
-      // PROVEN WORKING: Short focused intimate prompt - NO face/identity/hands tags
-      return `intimate close-up photo of bare skin between legs, ${bodyType} Indian woman, legs spread wide open, detailed skin texture and natural folds, completely naked, ${skinTone} skin, clean shaved smooth skin, soft natural thighs, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
+      // PROVEN WORKING on FLUX: explicit vaginal area tags for anatomical accuracy
+      return `extreme close-up photo of spread legs, detailed shaved pussy, showing vulva, bare crotch, completely naked, ${bodyType} Indian woman, ${skinTone} skin, soft natural thighs, lying on bed, soft bedroom lighting, photorealistic, RAW photo, masterpiece`;
     
     case 'ass':
       return `photo of ${bodyType} Indian woman viewed from behind, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
