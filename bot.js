@@ -457,12 +457,14 @@ const PREFERRED_MODELS = {
     "Nova Anime XL"
   ],
   sd15: [
-    "ICBINP - I Can't Believe It's Not Photography",
     "AbsoluteReality",
-    "NeverEnding Dream",
-    "NatViS",
+    "Realistic Vision",
+    "ICBINP - I Can't Believe It's Not Photography",
+    "majicMIX realistic",
+    "RealBiter",
     "Deliberate",
-    "Dreamshaper"
+    "Dreamshaper",
+    "NeverEnding Dream"
   ]
 };
 
@@ -920,10 +922,10 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   let imageBuffer = null;
   let successModel = null;
 
-  // Stage 1: AI Horde (SDXL/Pony/Illustrious — Premium Uncensored)
-  console.log(`🎨 Stage 1: AI Horde (SDXL/Pony/Illustrious)...`);
+  // Stage 1: AI Horde (SD 1.5 Realistic — Fast Primary)
+  console.log(`🎨 Stage 1: AI Horde (SD 1.5 Realistic)...`);
   const config1 = {
-    group: 'sdxl_group',
+    group: 'sd15_group',
     isClothingRequested,
     abortIfSlow: false,
     maxAttempts: 25
@@ -934,14 +936,14 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
   successModel = config1.successModel;
 
-  // Stage 2: AI Horde (SD 1.5 Realistic — Fallback)
+  // Stage 2: AI Horde (SDXL/Pony/Illustrious — Premium Fallback)
   if (!imageBuffer) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    console.log(`🎨 Stage 2: AI Horde (SD 1.5 Realistic)...`);
+    console.log(`🎨 Stage 2: AI Horde (SDXL/Pony/Illustrious)...`);
     const config2 = {
-      group: 'sd15_group',
+      group: 'sdxl_group',
       isClothingRequested,
       abortIfSlow: false,
       maxAttempts: 25
