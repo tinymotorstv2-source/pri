@@ -445,19 +445,15 @@ function getFocusCategory(history, tags) {
 const PREFERRED_MODELS = {
   pony: [
     "CyberRealistic Pony",
-    "WAI-ANI-NSFW-PONYXL",
-    "AMPonyXL",
-    "Pony Diffusion XL",
-    "BlenderMix Pony"
+    "AMPonyXL"
   ],
   illustrious: [
     "WAI-NSFW-illustrious-SDXL"
   ],
   sdxl: [
-    "AlbedoBase XL (SDXL)",
-    "AlbedoBase XL 3.1",
     "Juggernaut XL",
-    "Hassaku XL",
+    "AlbedoBase XL 3.1",
+    "AlbedoBase XL (SDXL)",
     "Nova Anime XL"
   ],
   sd15: [
@@ -780,169 +776,6 @@ function buildFluxPrompt(category, char) {
   }
 }
 
-async function generateWithHF(prompt, negativePrompt, category = 'default', char = null) {
-  if (!HF_TOKEN) {
-    console.log("⚠️ HF_TOKEN is not set. Skipping Hugging Face generation.");
-    return null;
-  }
-
-  // Build a SHORT, focused Flux-optimized prompt instead of transforming the long SD prompt
-  const fluxPrompt = buildFluxPrompt(category, char);
-  const seed = Math.floor(Math.random() * 1000000);
-  console.log(`🎨 Flux prompt (${category}) with seed ${seed}: ${fluxPrompt.substring(0, 100)}...`);
-
-  try {
-    console.log("🎨 Submitting request to Hugging Face Router (FLUX.1-schnell)...");
-    const response = await axios.post(
-      'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
-      {
-        inputs: fluxPrompt,
-        parameters: {
-          seed: seed
-        },
-        options: {
-          use_cache: false,
-          wait_for_model: true
-        }
-      },
-      {
-        headers: { 
-          Authorization: `Bearer ${HF_TOKEN}`,
-          Accept: 'image/png'
-        },
-        responseType: 'arraybuffer',
-        timeout: 30000
-      }
-    );
-
-    const buffer = Buffer.from(response.data);
-    const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
-    if (isImage) {
-      console.log(`🎉 Hugging Face FLUX.1-schnell image generated successfully! (${buffer.length} bytes)`);
-      return buffer;
-    } else {
-      const txt = buffer.toString('utf8').substring(0, 200);
-      console.error("⚠️ HF Router response was not a valid image:", txt);
-    }
-  } catch (e) {
-    const errMsg = e.response?.data ? Buffer.from(e.response.data).toString('utf8').substring(0, 300) : e.message;
-    console.error("⚠️ HF FLUX.1-schnell generation failed:", errMsg);
-  }
-
-  return null;
-}
-
-async function generateWithAirforce(prompt, negativePrompt, category = 'default', char = null) {
-  if (!AIRFORCE_API_KEY) {
-    console.log("⚠️ AIRFORCE_API_KEY is not set. Skipping api.airforce generation.");
-    return null;
-  }
-
-  // Try multiple models in order: z-image (best uncensored NSFW) → flux-2-dev (high quality)
-  const modelsToTry = ['z-image', 'flux-2-dev'];
-  const maxRetries = 3; // retries per model for rate limiting
-
-  for (const modelName of modelsToTry) {
-    // z-image handles detailed prompts well; flux models need shorter prompts
-    const usePrompt = modelName.startsWith('flux') ? buildFluxPrompt(category, char) : prompt;
-    console.log(`🎨 Airforce trying model: ${modelName} (${category}): ${usePrompt.substring(0, 100)}...`);
-
-    for (let retry = 0; retry < maxRetries; retry++) {
-      try {
-        if (retry > 0) {
-          const waitMs = Math.min(2000 * Math.pow(2, retry - 1), 8000);
-          console.log(`⏳ Airforce rate limit retry ${retry}/${maxRetries}, waiting ${waitMs}ms...`);
-          await new Promise(r => setTimeout(r, waitMs));
-        }
-
-        console.log(`🎨 Submitting request to api.airforce (Model: ${modelName}, attempt ${retry + 1})...`);
-        const response = await axios.post(
-          'https://api.airforce/v1/images/generations',
-          {
-            model: modelName,
-            prompt: usePrompt,
-            size: "768x1024",
-            response_format: "url"
-          },
-          {
-            headers: { 
-              'Authorization': `Bearer ${AIRFORCE_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 45000
-          }
-        );
-
-        if (response.data && response.data.data && response.data.data[0]) {
-          const imgData = response.data.data[0];
-          if (imgData.url) {
-            console.log(`🎉 Airforce ${modelName} image URL:`, imgData.url.substring(0, 150));
-            const imgRes = await axios.get(imgData.url, { responseType: 'arraybuffer', timeout: 25000 });
-            const buffer = Buffer.from(imgRes.data);
-            // Verify it's actually an image
-            const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
-            if (isImage && buffer.length > 5000) {
-              console.log(`🎉 Airforce ${modelName} image generated successfully! (${buffer.length} bytes)`);
-              return buffer;
-            } else {
-              console.error(`⚠️ Airforce ${modelName} returned invalid image data (${buffer.length} bytes)`);
-            }
-          } else if (imgData.b64_json) {
-            const buffer = Buffer.from(imgData.b64_json, 'base64');
-            console.log(`🎉 Airforce ${modelName} image generated (base64)! (${buffer.length} bytes)`);
-            return buffer;
-          }
-        } else {
-          console.error(`⚠️ Airforce ${modelName} response format invalid:`, JSON.stringify(response.data).substring(0, 300));
-        }
-        break; // Success or invalid format — don't retry, move to next model
-      } catch (e) {
-        const status = e.response?.status;
-        const errMsg = e.response?.data ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
-        console.error(`⚠️ Airforce ${modelName} attempt ${retry + 1} failed (HTTP ${status}):`, errMsg);
-        
-        // Only retry on rate limit (429), not other errors
-        if (status === 429 && retry < maxRetries - 1) {
-          continue; // Will wait and retry
-        }
-        break; // Other error — move to next model
-      }
-    }
-  }
-
-  return null;
-}
-
-async function generateWithPollinations(category, char, isClothingRequested) {
-  try {
-    console.log(`🎨 Submitting request to Pollinations.ai (Flux-Realism, category: ${category})...`);
-    const seed = Math.floor(Math.random() * 100000000);
-    
-    let prompt;
-    if (isClothingRequested) {
-      const poseTags = "wearing a gorgeous traditional Indian Saree, looking extremely seductive, looking at camera";
-      prompt = `photo of a beautiful curvy ${char.name}, mature and gorgeous Indian woman, ${char.identityTags}, ${poseTags}, bedroom, cinematic lighting, photorealistic, sharp focus, 4k, masterpiece`;
-    } else {
-      prompt = buildFluxPrompt(category, char);
-    }
-    
-    console.log(`🎨 Pollinations prompt: ${prompt.substring(0, 100)}...`);
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=768&height=1024&nologo=true&model=flux`;
-    
-    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 25000 });
-    const buffer = Buffer.from(res.data);
-    const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
-    if (isImage) {
-      console.log("🎉 Pollinations fallback image generated successfully!");
-      return buffer;
-    }
-    return null;
-  } catch (e) {
-    console.error("⚠️ Pollinations fallback failed:", e.message);
-    return null;
-  }
-}
-
 function hasClothingRequest(history, visualDesc) {
   let lastUserMsg = "";
   for (let i = history.length - 1; i >= 0; i--) {
@@ -1093,7 +926,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     group: 'sdxl_group',
     isClothingRequested,
     abortIfSlow: false,
-    maxAttempts: 35
+    maxAttempts: 25
   };
   if (forceDescription && user.lastGeneratedModel) {
     config1.forceModel = user.lastGeneratedModel;
@@ -1111,7 +944,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       group: 'sd15_group',
       isClothingRequested,
       abortIfSlow: false,
-      maxAttempts: 30
+      maxAttempts: 25
     };
     imageBuffer = await generateWithHorde(prompt, negPrompt, config2);
     successModel = config2.successModel;
