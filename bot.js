@@ -1027,17 +1027,28 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
   console.log(`🎨 Optimized Flux Prompt: ${fluxPrompt}`);
 
-  // Stage 1: Hugging Face (FLUX.1-schnell — Fast & Uncensored)
-  console.log(`🎨 Stage 1: Hugging Face FLUX.1-schnell...`);
-  imageBuffer = await generateWithHF(fluxPrompt);
-
-  // Stage 2: api.airforce Fallback (z-image — Free & Uncensored Fallback)
-  if (!imageBuffer && AIRFORCE_API_KEY) {
-    if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+  if (category === 'pussy') {
+    // For pussy, try api.airforce first to get uncensored detailed anatomy, fallback to HF
+    if (AIRFORCE_API_KEY) {
+      console.log(`🎨 Stage 1 (Pussy Special): api.airforce z-image...`);
+      imageBuffer = await generateWithAirforce(fluxPrompt, 'z-image');
     }
-    console.log(`🎨 Stage 2: api.airforce fallback...`);
-    imageBuffer = await generateWithAirforce(fluxPrompt, 'z-image');
+    if (!imageBuffer) {
+      console.log(`🎨 Stage 2 (Pussy Fallback): Hugging Face FLUX.1-schnell...`);
+      imageBuffer = await generateWithHF(fluxPrompt);
+    }
+  } else {
+    // For other categories, try Hugging Face first for speed/quality, fallback to api.airforce
+    console.log(`🎨 Stage 1: Hugging Face FLUX.1-schnell...`);
+    imageBuffer = await generateWithHF(fluxPrompt);
+
+    if (!imageBuffer && AIRFORCE_API_KEY) {
+      if (statusMsgId) {
+        await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+      }
+      console.log(`🎨 Stage 2: api.airforce fallback...`);
+      imageBuffer = await generateWithAirforce(fluxPrompt, 'z-image');
+    }
   }
 
   const opts = {
