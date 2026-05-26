@@ -9,6 +9,7 @@ const GROQ_KEY = process.env.GROQ_API_KEY;
 const HORDE_API_KEY = process.env.HORDE_API_KEY || '0000000000'; // Reads from Render environment variables
 const HF_TOKEN = process.env.HF_TOKEN || '';
 const AIRFORCE_API_KEY = process.env.AIRFORCE_API_KEY || '';
+const PRODIA_KEY = process.env.PRODIA_KEY || '';
 
 const MEMORY_FILE = path.join(__dirname, 'memory.json');
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
@@ -787,19 +788,20 @@ async function generateWithHF(prompt) {
   }
 }
 
-async function generateWithPollinations(prompt) {
+async function generateWithPollinations(prompt, width = 768, height = 1024) {
   try {
     const seed = Math.floor(Math.random() * 1000000);
-    console.log(`📡 Sending request to Pollinations.ai (Seed: ${seed})...`);
+    console.log(`📡 Sending request to Pollinations.ai (Seed: ${seed}, ${width}x${height})...`);
     
-    // We use Pollinations' flux model which is keyless, free, and completely uncensored.
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=flux`;
+    // Pollinations flux-realism model: much better for realistic anatomy than standard flux
+    // Using higher resolution for better anatomy detail
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=flux-realism&width=${width}&height=${height}`;
     
-    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 50000 });
+    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 60000 });
     const buffer = Buffer.from(res.data);
     
     const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
-    if (isImage) {
+    if (isImage && buffer.length > 5000) {
       console.log(`🎉 Pollinations image generation successful (${buffer.length} bytes)!`);
       return buffer;
     } else {
@@ -810,6 +812,156 @@ async function generateWithPollinations(prompt) {
     console.error("❌ Pollinations generation error:", e.message);
     return null;
   }
+}
+
+// ─── PRODIA API ENGINE (SDXL — Best Quality NSFW) ────────────────────────────
+async function generateWithProdia(prompt, negativePrompt = '') {
+  if (!PRODIA_KEY) {
+    console.log('⚠️ No PRODIA_KEY set, skipping Prodia...');
+    return null;
+  }
+  try {
+    const seed = Math.floor(Math.random() * 2147483647);
+    console.log(`📡 Sending request to Prodia SDXL (Seed: ${seed})...`);
+    
+    // Start generation job using SDXL endpoint with a top realistic model
+    const jobRes = await axios.post('https://api.prodia.com/v1/sdxl/generate', {
+      model: "realvisxlV40_v40Bakedvae.safetensors [d405e613]",
+      prompt: prompt,
+      negative_prompt: negativePrompt || "ugly, deformed, bad anatomy, extra limbs, mutated hands, blurry, low quality, worst quality, watermark, text, cartoon, anime, 3d, illustration",
+      steps: 25,
+      cfg_scale: 7,
+      seed: seed,
+      sampler: "DPM++ 2M Karras",
+      width: 768,
+      height: 1024
+    }, {
+      headers: {
+        'X-Prodia-Key': PRODIA_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 15000
+    });
+
+    const jobId = jobRes.data.job;
+    if (!jobId) {
+      console.error('❌ Prodia: No job ID returned:', jobRes.data);
+      return null;
+    }
+    console.log(`⏳ Prodia job started: ${jobId}`);
+
+    // Poll for completion (max 30 seconds)
+    let attempts = 0;
+    while (attempts < 15) {
+      await new Promise(r => setTimeout(r, 2000));
+      attempts++;
+      
+      const statusRes = await axios.get(`https://api.prodia.com/v1/job/${jobId}`, {
+        headers: { 'X-Prodia-Key': PRODIA_KEY },
+        timeout: 10000
+      });
+      
+      const status = statusRes.data.status;
+      
+      if (status === 'succeeded') {
+        const imageUrl = statusRes.data.imageUrl;
+        console.log(`🎉 Prodia generation succeeded! Downloading from: ${imageUrl}`);
+        
+        // Download the image
+        const imgRes = await axios.get(imageUrl, {
+          responseType: 'arraybuffer',
+          timeout: 15000
+        });
+        
+        const buffer = Buffer.from(imgRes.data);
+        const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
+        if (isImage && buffer.length > 5000) {
+          console.log(`🎉 Prodia image downloaded successfully (${buffer.length} bytes)!`);
+          return buffer;
+        } else {
+          console.error('❌ Prodia: Downloaded data is not a valid image');
+          return null;
+        }
+      } else if (status === 'failed') {
+        console.error('❌ Prodia job failed:', statusRes.data);
+        return null;
+      }
+      // status is 'queued' or 'generating' — keep polling
+    }
+    
+    console.error('❌ Prodia: Timed out waiting for job completion');
+    return null;
+  } catch (e) {
+    const errMsg = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+    console.error('❌ Prodia generation error:', errMsg.substring(0, 300));
+    return null;
+  }
+}
+
+// ─── PRODIA-OPTIMIZED PROMPT BUILDER (SD/SDXL — handles long detailed prompts) ─
+// Unlike FLUX (4 steps, short prompts only), Prodia SDXL uses 25+ steps
+// and can handle rich, detailed prompts with specific anatomy tags.
+// Negative prompts are critical for avoiding bad anatomy.
+function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "") {
+  const skinMatch = char?.identityTags?.match(/(extremely fair|very fair|fair|milky white|gori|dusky|wheatish)/i);
+  const skinTone = skinMatch ? skinMatch[0] : 'smooth';
+  const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
+  const hair = hairDesc ? hairDesc[0] : 'dark hair';
+  
+  const age = char?.age || 30;
+  const bodyType = age >= 35 ? 'mature curvy' : (age <= 25 ? 'young slim' : 'attractive curvy');
+  
+  let prompt = '';
+  let negativePrompt = 'ugly, deformed, bad anatomy, extra limbs, mutated hands, blurry, low quality, worst quality, watermark, text, signature, cartoon, anime, 3d, illustration, drawing, painting, sketch, cg render';
+
+  if (isClothingRequested) {
+    const cleanDesc = visualDesc || "wearing seductive outfit";
+    switch (category) {
+      case 'breasts':
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing deep cleavage, wearing seductive low-cut ${cleanDesc}, looking seductively at camera, bedroom setting, warm golden lighting, sharp focus, ultra detailed, professional photography, 8k`;
+        break;
+      case 'ass':
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, ${bodyType} Indian woman viewed from behind, ${age} years old, ${hair}, wearing sexy tight ${cleanDesc}, showing curvy round backside and wide hips, soft thick thighs, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
+        break;
+      case 'pussy':
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up, ${bodyType} Indian woman lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${skinTone} skin, soft warm bedroom lighting, sharp focus, ultra detailed, 8k`;
+        break;
+      case 'face':
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, wearing ${cleanDesc}, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
+        break;
+      default:
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
+    }
+    return { prompt, negativePrompt };
+  }
+  
+  switch (category) {
+    case 'pussy':
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${bodyType} Indian woman lying on bed, legs spread wide open, showing detailed vulva, labia, smooth shaved skin, natural skin folds and texture, ${skinTone} skin, soft inner thighs, clean shaved smooth intimate area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k`;
+      negativePrompt += ', face, head, upper body, hands near crotch, extra fingers, clothes, clothing, bra, panties, underwear, censored, mosaic, pixelated';
+      break;
+    
+    case 'ass':
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, ${bodyType} Indian woman viewed from behind, ${age} years old, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k`;
+      negativePrompt += ', front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear';
+      break;
+    
+    case 'breasts':
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing large natural bare breasts, detailed nipples, cleavage, completely naked upper body, no bra, no clothes, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
+      negativePrompt += ', hands near face, legs, feet, clothes, clothing, bra, underwear, panties';
+      break;
+    
+    case 'face':
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, soft plump lips, looking at camera, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
+      negativePrompt += ', body, hands, fingers, nudity, clothes';
+      break;
+    
+    default:
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, completely naked, showing full nude body, large natural breasts, wide hips, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
+  }
+  
+  return { prompt, negativePrompt };
 }
 
 // ─── FLUX-OPTIMIZED PROMPT BUILDER ───────────────────────────────────────────
@@ -1005,25 +1157,42 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ FLUX HUGGING FACE & POLLINATIONS FALLBACK PIPELINE ═══
+  // ═══ PRODIA → POLLINATIONS → HF FLUX FALLBACK PIPELINE ═══
+  // Priority: Prodia (best quality, if key) → Pollinations (FREE, unlimited) → HF (monthly credits)
   let imageBuffer = null;
   let successModel = null;
 
-  // Generate the highly optimized Flux prompt
+  // Generate prompts for different engines
   const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
-  console.log(`🎨 Optimized Flux Prompt: ${fluxPrompt}`);
 
-  // Stage 1: Hugging Face (FLUX.1-schnell — Fast & Uncensored)
-  console.log(`🎨 Stage 1: Hugging Face FLUX.1-schnell...`);
-  imageBuffer = await generateWithHF(fluxPrompt);
+  // Stage 1: Prodia SDXL (Best Quality — 25 steps, negative prompts, realistic models)
+  if (PRODIA_KEY) {
+    const prodiaPromptData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
+    console.log(`🎨 Stage 1: Prodia SDXL...`);
+    console.log(`🎨 Prodia Prompt: ${prodiaPromptData.prompt.substring(0, 150)}...`);
+    imageBuffer = await generateWithProdia(prodiaPromptData.prompt, prodiaPromptData.negativePrompt);
+    if (imageBuffer) successModel = 'prodia_sdxl';
+  }
 
-  // Stage 2: Pollinations.ai Fallback (any-dark — Keyless, Free, Uncensored Fallback)
+  // Stage 2: Pollinations.ai (FREE, Unlimited, Uncensored — Primary for free users)
   if (!imageBuffer) {
-    if (statusMsgId) {
+    if (statusMsgId && PRODIA_KEY) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    console.log(`🎨 Stage 2: Pollinations.ai fallback...`);
-    imageBuffer = await generateWithPollinations(fluxPrompt);
+    console.log(`🎨 Stage ${PRODIA_KEY ? '2' : '1'}: Pollinations.ai...`);
+    console.log(`🎨 Pollinations Prompt: ${fluxPrompt.substring(0, 150)}...`);
+    imageBuffer = await generateWithPollinations(fluxPrompt, 768, 1024);
+    if (imageBuffer) successModel = 'pollinations';
+  }
+
+  // Stage 3: Hugging Face FLUX.1-schnell (Backup — uses monthly credits)
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
+    }
+    console.log(`🎨 Stage ${PRODIA_KEY ? '3' : '2'}: Hugging Face FLUX.1-schnell...`);
+    imageBuffer = await generateWithHF(fluxPrompt);
+    if (imageBuffer) successModel = 'hf_flux';
   }
 
   const opts = {
