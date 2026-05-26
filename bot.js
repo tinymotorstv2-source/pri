@@ -941,7 +941,7 @@ async function generateWithProdia(prompt, negativePrompt = '') {
 // and can handle rich, detailed prompts with specific anatomy tags.
 // Negative prompts are critical for avoiding bad anatomy.
 function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "") {
-  const skinTone = 'extremely fair milky white'; // Strongly forced as per user request
+  const skinTone = 'extremely soft fluffy white, flawless pale'; // Strongly forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
   const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
@@ -1012,7 +1012,7 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
 // Tested & proven: simple focused prompts produce perfect anatomy every time.
 function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc = "") {
   // Extract skin tone from character identity tags
-  const skinTone = 'extremely fair milky white'; // Strongly forced as per user request
+  const skinTone = 'extremely soft fluffy white, flawless pale'; // Strongly forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
   const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
