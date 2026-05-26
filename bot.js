@@ -742,13 +742,97 @@ async function generateWithHorde(prompt, negativePrompt, config = { group: 'sdxl
   }
 }
 
+async function generateWithHF(prompt) {
+  try {
+    const seed = Math.floor(Math.random() * 1000000);
+    console.log(`📡 Sending request to Hugging Face FLUX.1-schnell (Seed: ${seed})...`);
+    
+    const response = await axios.post(
+      'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
+      {
+        inputs: prompt,
+        parameters: {
+          seed: seed
+        },
+        options: {
+          use_cache: false,
+          wait_for_model: true
+        }
+      },
+      {
+        headers: { 
+          'Authorization': `Bearer ${HF_TOKEN}`,
+          'Accept': 'image/png'
+        },
+        responseType: 'arraybuffer',
+        timeout: 40000
+      }
+    );
+
+    const buffer = Buffer.from(response.data);
+    
+    // Check if valid image (PNG or JPG)
+    const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
+    if (isImage) {
+      console.log(`🎉 Hugging Face image generation successful (${buffer.length} bytes)!`);
+      return buffer;
+    } else {
+      console.error("❌ Hugging Face response was not a valid image:", buffer.toString('utf8').substring(0, 200));
+      return null;
+    }
+  } catch (e) {
+    const errMsg = e.response?.data ? Buffer.from(e.response.data).toString('utf8') : e.message;
+    console.error("❌ Hugging Face generation error:", errMsg.substring(0, 300));
+    return null;
+  }
+}
+
+async function generateWithAirforce(prompt, modelName = 'z-image') {
+  try {
+    console.log(`📡 Sending fallback request to api.airforce (Model: ${modelName})...`);
+    const response = await axios.post(
+      'https://api.airforce/v1/images/generations',
+      {
+        model: modelName,
+        prompt: prompt,
+        size: "768x1024",
+        response_format: "url"
+      },
+      {
+        headers: { 
+          'Authorization': `Bearer ${AIRFORCE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 45000
+      }
+    );
+
+    if (response.data && response.data.data && response.data.data[0]) {
+      const imgData = response.data.data[0];
+      if (imgData.url) {
+        console.log(`🎉 api.airforce image URL received: ${imgData.url}`);
+        const imgRes = await axios.get(imgData.url, { responseType: 'arraybuffer', timeout: 25000 });
+        return Buffer.from(imgRes.data);
+      } else if (imgData.b64_json) {
+        console.log(`🎉 api.airforce base64 image data received!`);
+        return Buffer.from(imgData.b64_json, 'base64');
+      }
+    }
+    console.error("❌ api.airforce response format invalid:", response.data);
+    return null;
+  } catch (e) {
+    console.error("❌ api.airforce fallback generation error:", e.response?.data ? JSON.stringify(e.response.data) : e.message);
+    return null;
+  }
+}
+
 // ─── FLUX-OPTIMIZED PROMPT BUILDER ───────────────────────────────────────────
 // Flux-schnell uses only 4 inference steps. It CANNOT handle long complex prompts.
 // Long prompts with identity tags, face descriptions, "perfect hands/eyes" etc.
 // cause Flux to render random body parts (hands in crotch shots, extra limbs).
 // Solution: Build SHORT, focused, category-specific prompts (~30-50 words max).
 // Tested & proven: simple focused prompts produce perfect anatomy every time.
-function buildFluxPrompt(category, char) {
+function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc = "") {
   // Extract skin tone from character identity tags
   const skinMatch = char?.identityTags?.match(/(extremely fair|very fair|fair|milky white|gori|dusky|wheatish)/i);
   const skinTone = skinMatch ? skinMatch[0] : 'smooth';
@@ -757,6 +841,23 @@ function buildFluxPrompt(category, char) {
   
   const age = char?.age || 30;
   const bodyType = age >= 35 ? 'mature curvy' : (age <= 25 ? 'young slim' : 'attractive curvy');
+
+  // Handle clothing requests dynamically
+  if (isClothingRequested) {
+    const cleanDesc = visualDesc || "wearing seductive outfit";
+    switch (category) {
+      case 'breasts':
+        return `photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing cleavage, wearing seductive low-cut ${cleanDesc}, looking at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+      case 'ass':
+        return `photo of ${bodyType} Indian woman viewed from behind, wearing sexy tight ${cleanDesc}, showing curvy backside and hips, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+      case 'pussy':
+        return `intimate close-up photo, spread legs, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, lying on bed, soft bedroom lighting, photorealistic, RAW photo, masterpiece`;
+      case 'face':
+        return `close-up portrait photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, wearing ${cleanDesc}, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
+      default:
+        return `full body photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
+    }
+  }
   
   switch (category) {
     case 'pussy':
@@ -918,38 +1019,25 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ ONLY AI HORDE PIPELINE (100% Uncensored community models) ═══
+  // ═══ FLUX HUGGING FACE & AIRFORCE FALLBACK PIPELINE ═══
   let imageBuffer = null;
   let successModel = null;
 
-  // Stage 1: AI Horde (SD 1.5 Realistic — Fast Primary)
-  console.log(`🎨 Stage 1: AI Horde (SD 1.5 Realistic)...`);
-  const config1 = {
-    group: 'sd15_group',
-    isClothingRequested,
-    abortIfSlow: false,
-    maxAttempts: 25
-  };
-  if (forceDescription && user.lastGeneratedModel) {
-    config1.forceModel = user.lastGeneratedModel;
-  }
-  imageBuffer = await generateWithHorde(prompt, negPrompt, config1);
-  successModel = config1.successModel;
+  // Generate the highly optimized Flux prompt
+  const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
+  console.log(`🎨 Optimized Flux Prompt: ${fluxPrompt}`);
 
-  // Stage 2: AI Horde (SDXL/Pony/Illustrious — Premium Fallback)
-  if (!imageBuffer) {
+  // Stage 1: Hugging Face (FLUX.1-schnell — Fast & Uncensored)
+  console.log(`🎨 Stage 1: Hugging Face FLUX.1-schnell...`);
+  imageBuffer = await generateWithHF(fluxPrompt);
+
+  // Stage 2: api.airforce Fallback (z-image — Free & Uncensored Fallback)
+  if (!imageBuffer && AIRFORCE_API_KEY) {
     if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    console.log(`🎨 Stage 2: AI Horde (SDXL/Pony/Illustrious)...`);
-    const config2 = {
-      group: 'sdxl_group',
-      isClothingRequested,
-      abortIfSlow: false,
-      maxAttempts: 25
-    };
-    imageBuffer = await generateWithHorde(prompt, negPrompt, config2);
-    successModel = config2.successModel;
+    console.log(`🎨 Stage 2: api.airforce fallback...`);
+    imageBuffer = await generateWithAirforce(fluxPrompt, 'z-image');
   }
 
   const opts = {

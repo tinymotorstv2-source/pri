@@ -19,7 +19,7 @@ async function testModel(modelName) {
   console.log(`\nTesting Hugging Face Model: ${modelName}...`);
   try {
     const res = await axios.post(
-      `https://api-inference.huggingface.co/models/${modelName}`,
+      `https://router.huggingface.co/hf-inference/models/${modelName}`,
       {
         inputs: prompt,
         parameters: { 
