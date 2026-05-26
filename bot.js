@@ -762,7 +762,7 @@ async function generateWithHF(prompt) {
       {
         headers: { 
           'Authorization': `Bearer ${HF_TOKEN}`,
-          'Accept': 'image/png'
+          'Accept': 'image/jpeg'
         },
         responseType: 'arraybuffer',
         timeout: 40000
