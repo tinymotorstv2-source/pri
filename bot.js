@@ -10,6 +10,14 @@ const HORDE_API_KEY = process.env.HORDE_API_KEY || '0000000000'; // Reads from R
 const HF_TOKEN = process.env.HF_TOKEN || '';
 const AIRFORCE_API_KEY = process.env.AIRFORCE_API_KEY || '';
 const PRODIA_KEY = process.env.PRODIA_KEY || '';
+const RUNWARE_API_KEY = process.env.RUNWARE_API_KEY || '';
+const { Runware } = require('@runware/sdk-js');
+
+let runwareClient = null;
+if (RUNWARE_API_KEY) {
+  runwareClient = new Runware({ apiKey: RUNWARE_API_KEY });
+  runwareClient.connect().catch(e => console.error("Runware connection error:", e));
+}
 
 const MEMORY_FILE = path.join(__dirname, 'memory.json');
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
@@ -814,6 +822,48 @@ async function generateWithPollinations(prompt, width = 768, height = 1024) {
   }
 }
 
+// ─── RUNWARE API ENGINE (SDXL/CivitAI — Fastest & Best Quality) ──────────────
+async function generateWithRunware(prompt, negativePrompt = '') {
+  if (!runwareClient) {
+    console.log('⚠️ No RUNWARE_API_KEY set, skipping Runware...');
+    return null;
+  }
+  try {
+    console.log(`📡 Sending request to Runware (Realistic Vision V6.0)...`);
+    const startTime = Date.now();
+    
+    const image = await runwareClient.requestImages({
+      positivePrompt: prompt,
+      negativePrompt: negativePrompt || "ugly, deformed, bad anatomy, bad hands, extra limbs, clothing, text, watermark",
+      model: "civitai:133005@782002", // Realistic Vision V6.0 B1 (Excellent anatomy)
+      width: 768,
+      height: 1024,
+      numberResults: 1,
+      outputType: ["URL"],
+      steps: 25,
+      CFGScale: 7
+    });
+
+    if (image && image[0] && image[0].imageURL) {
+      console.log(`🎉 Runware generated successfully in ${Date.now() - startTime}ms! Downloading...`);
+      const res = await axios.get(image[0].imageURL, { responseType: 'arraybuffer', timeout: 15000 });
+      return Buffer.from(res.data);
+    }
+    
+    console.error('❌ Runware failed to return image URL');
+    return null;
+  } catch (e) {
+    console.error('❌ Runware generation error:', e.message);
+    return null;
+  }
+}
+
+function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "") {
+  // We can reuse the Prodia prompt builder since both use SD/SDXL paradigms
+  // which benefit from detailed prompts and negative prompts.
+  return buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
+}
+
 // ─── PRODIA API ENGINE (SDXL — Best Quality NSFW) ────────────────────────────
 async function generateWithProdia(prompt, negativePrompt = '') {
   if (!PRODIA_KEY) {
@@ -1157,40 +1207,50 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ PRODIA → POLLINATIONS → HF FLUX FALLBACK PIPELINE ═══
-  // Priority: Prodia (best quality, if key) → Pollinations (FREE, unlimited) → HF (monthly credits)
+  // ═══ RUNWARE → PRODIA → POLLINATIONS → HF FLUX FALLBACK PIPELINE ═══
+  // Priority: Runware (Best/Fastest) → Prodia → Pollinations (FREE) → HF
   let imageBuffer = null;
   let successModel = null;
 
   // Generate prompts for different engines
   const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
 
-  // Stage 1: Prodia SDXL (Best Quality — 25 steps, negative prompts, realistic models)
-  if (PRODIA_KEY) {
+  // Stage 1: Runware (CivitAI SDXL - Best Quality, Sub-second, requires API key)
+  if (RUNWARE_API_KEY) {
+    const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc);
+    console.log(`🎨 Stage 1: Runware API...`);
+    console.log(`🎨 Runware Prompt: ${runwarePromptData.prompt.substring(0, 150)}...`);
+    imageBuffer = await generateWithRunware(runwarePromptData.prompt, runwarePromptData.negativePrompt);
+    if (imageBuffer) successModel = 'runware';
+  }
+
+  // Stage 2: Prodia SDXL (High Quality, requires API key)
+  if (!imageBuffer && PRODIA_KEY) {
+    if (statusMsgId && RUNWARE_API_KEY) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+    }
     const prodiaPromptData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
-    console.log(`🎨 Stage 1: Prodia SDXL...`);
-    console.log(`🎨 Prodia Prompt: ${prodiaPromptData.prompt.substring(0, 150)}...`);
+    console.log(`🎨 Stage 2: Prodia SDXL...`);
     imageBuffer = await generateWithProdia(prodiaPromptData.prompt, prodiaPromptData.negativePrompt);
     if (imageBuffer) successModel = 'prodia_sdxl';
   }
 
-  // Stage 2: Pollinations.ai (FREE, Unlimited, Uncensored — Primary for free users)
+  // Stage 3: Pollinations.ai (FREE, Unlimited, Uncensored — Primary for free users)
   if (!imageBuffer) {
-    if (statusMsgId && PRODIA_KEY) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+    if (statusMsgId && (RUNWARE_API_KEY || PRODIA_KEY)) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
     }
-    console.log(`🎨 Stage ${PRODIA_KEY ? '2' : '1'}: Pollinations.ai...`);
-    console.log(`🎨 Pollinations Prompt: ${fluxPrompt.substring(0, 150)}...`);
+    console.log(`🎨 Stage 3: Pollinations.ai...`);
     imageBuffer = await generateWithPollinations(fluxPrompt, 768, 1024);
     if (imageBuffer) successModel = 'pollinations';
   }
 
-  // Stage 3: Hugging Face FLUX.1-schnell (Backup — uses monthly credits)
+  // Stage 4: Hugging Face FLUX.1-schnell (Backup — uses monthly credits)
   if (!imageBuffer) {
     if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
     }
-    console.log(`🎨 Stage ${PRODIA_KEY ? '3' : '2'}: Hugging Face FLUX.1-schnell...`);
+    console.log(`🎨 Stage 4: Hugging Face FLUX.1-schnell...`);
     imageBuffer = await generateWithHF(fluxPrompt);
     if (imageBuffer) successModel = 'hf_flux';
   }
