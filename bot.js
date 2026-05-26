@@ -792,8 +792,8 @@ async function generateWithPollinations(prompt) {
     const seed = Math.floor(Math.random() * 1000000);
     console.log(`📡 Sending request to Pollinations.ai (Seed: ${seed})...`);
     
-    // We use Pollinations' any-dark model which is keyless, free, and completely uncensored.
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=any-dark`;
+    // We use Pollinations' flux model which is keyless, free, and completely uncensored.
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=flux`;
     
     const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 50000 });
     const buffer = Buffer.from(res.data);
