@@ -954,13 +954,13 @@ async function generateWithProdia(prompt, negativePrompt = '') {
 // and can handle rich, detailed prompts with specific anatomy tags.
 // Negative prompts are critical for avoiding bad anatomy.
 function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "") {
-  const skinMatch = char?.identityTags?.match(/(extremely fair|very fair|fair|milky white|gori|dusky|wheatish)/i);
-  const skinTone = skinMatch ? skinMatch[0] : 'smooth';
+  const skinTone = 'fair white'; // Forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
   const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
   const age = char?.age || 30;
-  const bodyType = age >= 35 ? 'mature curvy' : (age <= 25 ? 'young slim' : 'attractive curvy');
+  // Enforce curvy figure for all ages
+  const bodyType = age >= 35 ? 'mature curvy figure' : (age <= 25 ? 'young curvy figure' : 'attractive curvy figure');
   
   let prompt = '';
   let negativePrompt = 'ugly, deformed, bad anatomy, extra limbs, mutated hands, blurry, low quality, worst quality, watermark, text, signature, cartoon, anime, 3d, illustration, drawing, painting, sketch, cg render';
@@ -1022,13 +1022,13 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
 // Tested & proven: simple focused prompts produce perfect anatomy every time.
 function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc = "") {
   // Extract skin tone from character identity tags
-  const skinMatch = char?.identityTags?.match(/(extremely fair|very fair|fair|milky white|gori|dusky|wheatish)/i);
-  const skinTone = skinMatch ? skinMatch[0] : 'smooth';
+  const skinTone = 'fair white'; // Forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
   const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
   const age = char?.age || 30;
-  const bodyType = age >= 35 ? 'mature curvy' : (age <= 25 ? 'young slim' : 'attractive curvy');
+  // Enforce curvy figure for all ages
+  const bodyType = age >= 35 ? 'mature curvy figure' : (age <= 25 ? 'young curvy figure' : 'attractive curvy figure');
 
   // Handle clothing requests dynamically
   if (isClothingRequested) {
