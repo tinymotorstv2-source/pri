@@ -851,7 +851,7 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
       case 'ass':
         return `photo of ${bodyType} Indian woman viewed from behind, wearing sexy tight ${cleanDesc}, showing curvy backside and hips, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
       case 'pussy':
-        return `intimate close-up photo, spread legs, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, lying on bed, soft bedroom lighting, photorealistic, RAW photo, masterpiece`;
+        return `intimate close-up photo, ${bodyType} Indian woman lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
       case 'face':
         return `close-up portrait photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, wearing ${cleanDesc}, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
       default:
@@ -861,8 +861,8 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
   
   switch (category) {
     case 'pussy':
-      // PROVEN WORKING on FLUX: Short, focused vaginal area tags to prevent weird limbs/anatomy artifacts
-      return `extreme close-up photo of spread legs, detailed shaved pussy, showing vulva, bare crotch, completely naked, lying on bed, soft bedroom lighting, photorealistic, RAW photo, masterpiece`;
+      // PROVEN WORKING on FLUX: Using descriptive, high-quality, anatomically robust tags to prevent safety degradation or weird anatomy artifacts
+      return `intimate close-up photo of bare skin between legs, ${bodyType} Indian woman, legs spread wide open, detailed skin texture and natural folds, completely naked, ${skinTone} skin, clean shaved smooth skin, soft natural thighs, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
     
     case 'ass':
       return `photo of ${bodyType} Indian woman viewed from behind, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
