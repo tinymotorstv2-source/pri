@@ -13,13 +13,56 @@ const PRODIA_KEY = process.env.PRODIA_KEY || '';
 const RUNWARE_API_KEY = process.env.RUNWARE_API_KEY || '';
 const { Runware } = require('@runware/sdk-js');
 
-let runwareClient = null;
-if (RUNWARE_API_KEY) {
-  runwareClient = new Runware({ apiKey: RUNWARE_API_KEY });
-  runwareClient.connect().catch(e => console.error("Runware connection error:", e));
+const MEMORY_FILE = path.join(__dirname, 'memory.json');
+
+// Runware API Key Rotation System
+let currentRunwareClient = null;
+let currentActiveRunwareKey = null;
+
+function getRunwareKeys() {
+  const envKeys = RUNWARE_API_KEY 
+    ? RUNWARE_API_KEY.split(',').map(k => k.trim()).filter(Boolean) 
+    : [];
+  let memKeys = [];
+  try {
+    if (fs.existsSync(MEMORY_FILE)) {
+      const mem = JSON.parse(fs.readFileSync(MEMORY_FILE));
+      memKeys = mem._globalRunwareKeys || [];
+    }
+  } catch (e) {
+    console.error("Error reading runware keys from memory:", e.message);
+  }
+  return Array.from(new Set([...envKeys, ...memKeys]));
 }
 
-const MEMORY_FILE = path.join(__dirname, 'memory.json');
+async function getRunwareClient(specifiedKey = null) {
+  const keys = getRunwareKeys();
+  if (keys.length === 0) return null;
+
+  const keyToUse = specifiedKey || currentActiveRunwareKey || keys[0];
+
+  if (currentRunwareClient && currentActiveRunwareKey === keyToUse) {
+    return currentRunwareClient;
+  }
+
+  console.log(`🔌 Initializing Runware client with key: ${keyToUse.substring(0, 8)}...`);
+  try {
+    const client = new Runware({ apiKey: keyToUse });
+    await client.connect();
+    currentRunwareClient = client;
+    currentActiveRunwareKey = keyToUse;
+    return client;
+  } catch (err) {
+    console.error(`❌ Failed to connect Runware client with key ${keyToUse.substring(0, 8)}...:`, err.message);
+    return null;
+  }
+}
+
+// Pre-connect background initializer
+const initialKeys = getRunwareKeys();
+if (initialKeys.length > 0) {
+  getRunwareClient(initialKeys[0]).catch(e => console.error("Initial Runware connection error:", e.message));
+}
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
 
 // Initialize bot: Use webhook on Render, polling locally
@@ -811,38 +854,64 @@ async function generateWithPollinations(prompt, width = 768, height = 1024) {
 
 // ─── RUNWARE API ENGINE (SDXL/CivitAI — Fastest & Best Quality) ──────────────
 async function generateWithRunware(prompt, negativePrompt = '') {
-  if (!runwareClient) {
-    console.log('⚠️ No RUNWARE_API_KEY set, skipping Runware...');
+  const keys = getRunwareKeys();
+  if (keys.length === 0) {
+    console.log('⚠️ No Runware API keys configured, skipping Runware...');
     return null;
   }
-  try {
-    console.log(`📡 Sending request to Runware (Realistic Vision V6.0)...`);
-    const startTime = Date.now();
-    
-    const image = await runwareClient.requestImages({
-      positivePrompt: prompt,
-      negativePrompt: negativePrompt || "ugly, deformed, bad anatomy, bad hands, extra limbs, clothing, text, watermark",
-      model: "civitai:133005@782002", // Realistic Vision V6.0 B1 (Excellent anatomy)
-      width: 768,
-      height: 1024,
-      numberResults: 1,
-      outputType: ["URL"],
-      steps: 25,
-      CFGScale: 7
-    });
 
-    if (image && image[0] && image[0].imageURL) {
-      console.log(`🎉 Runware generated successfully in ${Date.now() - startTime}ms! Downloading...`);
-      const res = await axios.get(image[0].imageURL, { responseType: 'arraybuffer', timeout: 15000 });
-      return Buffer.from(res.data);
+  // Find index of current key to start with, or start with 0
+  let startIndex = keys.indexOf(currentActiveRunwareKey);
+  if (startIndex === -1) startIndex = 0;
+
+  // Loop through all keys to try and generate the image
+  for (let i = 0; i < keys.length; i++) {
+    const index = (startIndex + i) % keys.length;
+    const keyToTry = keys[index];
+    console.log(`📡 Trying Runware with key index ${index} (${keyToTry.substring(0, 8)}...)...`);
+
+    const client = await getRunwareClient(keyToTry);
+    if (!client) {
+      console.log(`⚠️ Failed to initialize client for key index ${index}, trying next key.`);
+      continue;
     }
-    
-    console.error('❌ Runware failed to return image URL');
-    return null;
-  } catch (e) {
-    console.error('❌ Runware generation error:', e.message);
-    return null;
+
+    try {
+      const startTime = Date.now();
+      const image = await client.requestImages({
+        positivePrompt: prompt,
+        negativePrompt: negativePrompt || "ugly, deformed, bad anatomy, bad hands, extra limbs, clothing, text, watermark",
+        model: "civitai:133005@782002", // Realistic Vision V6.0 B1 (Excellent anatomy)
+        width: 768,
+        height: 1024,
+        numberResults: 1,
+        outputType: ["URL"],
+        steps: 25,
+        CFGScale: 7
+      });
+
+      if (image && image[0] && image[0].imageURL) {
+        console.log(`🎉 Runware generated successfully using key index ${index} in ${Date.now() - startTime}ms! Downloading...`);
+        const res = await axios.get(image[0].imageURL, { responseType: 'arraybuffer', timeout: 15000 });
+        
+        // Save this key as the active key for future runs so we start here
+        currentActiveRunwareKey = keyToTry;
+        return Buffer.from(res.data);
+      } else {
+        console.error(`❌ Runware failed to return image URL using key index ${index}`);
+      }
+    } catch (e) {
+      console.error(`❌ Runware generation error using key index ${index}:`, e.message);
+      // Key failed, so let's reset client for this key to force re-initialization if ever retried
+      if (currentActiveRunwareKey === keyToTry) {
+        currentRunwareClient = null;
+        currentActiveRunwareKey = null;
+      }
+    }
   }
+
+  console.error('❌ All Runware API keys failed.');
+  return null;
 }
 
 function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "") {
@@ -1207,7 +1276,8 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
 
   // Stage 1: Runware (CivitAI SDXL - Best Quality, Sub-second, requires API key)
-  if (RUNWARE_API_KEY) {
+  const hasRunwareKeys = getRunwareKeys().length > 0;
+  if (hasRunwareKeys) {
     const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc);
     console.log(`🎨 Stage 1: Runware API...`);
     console.log(`🎨 Runware Prompt: ${runwarePromptData.prompt.substring(0, 150)}...`);
@@ -1217,7 +1287,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   // Stage 2: Prodia SDXL (High Quality, requires API key)
   if (!imageBuffer && PRODIA_KEY) {
-    if (statusMsgId && RUNWARE_API_KEY) {
+    if (statusMsgId && hasRunwareKeys) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
     const prodiaPromptData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
@@ -1228,7 +1298,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   // Stage 3: Pollinations.ai (FREE, Unlimited, Uncensored — Primary for free users)
   if (!imageBuffer) {
-    if (statusMsgId && (RUNWARE_API_KEY || PRODIA_KEY)) {
+    if (statusMsgId && (hasRunwareKeys || PRODIA_KEY)) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
     }
     console.log(`🎨 Stage 3: Pollinations.ai...`);
@@ -1347,6 +1417,9 @@ bot.onText(/\/help/, async (msg) => {
     `👯 /characters - Switch between active girls (Priya, Kavya, Sneha, Savita).\n` +
     `🎭 /scenario - Select custom NSFW roleplay scenarios.\n` +
     `🔞 /truthordare - Play a dirty Truth or Dare game for premium photo rewards.\n` +
+    `🔑 /listkeys - View all configured Runware API Keys.\n` +
+    `➕ /addkey <key> - Add a new Runware API Key.\n` +
+    `➖ /removekey <key> - Remove a Runware API Key.\n` +
     `📸 (Photo keywords) - Request custom photos dynamically in chat.\n` +
     `💬 (Chat) - Talk to the active girl in Hinglish, anytime, free & unlimited.\n` +
     `----------------------------------\n` +
@@ -1447,6 +1520,87 @@ bot.onText(/\/truthordare/, async (msg) => {
   };
 
   await bot.sendMessage(chatId, `🔞 **Truth or Dare Game!**\n\nChoose your choice: Truth (Main aapse ek personal aur gandi baat puchungi) ya Dare (Main aapko ek wild task dungi). Click a button:`, opts);
+});
+
+bot.onText(/\/addkey (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const newKey = match[1].trim();
+  
+  if (!newKey) {
+    await bot.sendMessage(chatId, "⚠️ Please provide a valid Runware API Key. Usage: `/addkey <your_api_key>`", { parse_mode: 'Markdown' });
+    return;
+  }
+
+  const mem = loadMemory();
+  if (!mem._globalRunwareKeys) {
+    mem._globalRunwareKeys = [];
+  }
+
+  if (mem._globalRunwareKeys.includes(newKey)) {
+    await bot.sendMessage(chatId, "⚠️ Yeh API Key pehle se hi added hai!");
+    return;
+  }
+
+  mem._globalRunwareKeys.push(newKey);
+  saveMemory(mem);
+
+  await bot.sendMessage(chatId, `✅ *Runware API Key successfully add ho gayi hai!* \nAb total ${getRunwareKeys().length} keys rotation mein hain.`, { parse_mode: 'Markdown' });
+});
+
+bot.onText(/\/listkeys/, async (msg) => {
+  const chatId = msg.chat.id;
+  const keys = getRunwareKeys();
+
+  if (keys.length === 0) {
+    await bot.sendMessage(chatId, "⚠️ Abhi koi bhi Runware API key configured nahi hai. `/addkey <key>` se add karein.");
+    return;
+  }
+
+  let response = "🔑 *Configured Runware API Keys:*\n\n";
+  keys.forEach((k, idx) => {
+    const masked = k.length > 10 ? `${k.substring(0, 6)}...${k.substring(k.length - 4)}` : 'Invalid Key';
+    const isActive = (k === currentActiveRunwareKey) ? "🟢 *Active*" : "⚪";
+    response += `${idx + 1}. \`${masked}\` - ${isActive}\n`;
+  });
+
+  await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+});
+
+bot.onText(/\/removekey (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const keyToRemove = match[1].trim();
+
+  const mem = loadMemory();
+  const memKeys = mem._globalRunwareKeys || [];
+
+  const idx = memKeys.indexOf(keyToRemove);
+  if (idx === -1) {
+    const fullKeyIdx = memKeys.findIndex(k => k.includes(keyToRemove));
+    if (fullKeyIdx !== -1) {
+      const removedKey = memKeys.splice(fullKeyIdx, 1)[0];
+      mem._globalRunwareKeys = memKeys;
+      saveMemory(mem);
+      if (currentActiveRunwareKey === removedKey) {
+        currentRunwareClient = null;
+        currentActiveRunwareKey = null;
+      }
+      await bot.sendMessage(chatId, `✅ API Key \`${removedKey.substring(0, 6)}...\` remove kar di gayi hai!`, { parse_mode: 'Markdown' });
+    } else {
+      await bot.sendMessage(chatId, "⚠️ Yeh API Key list mein nahi mili (dhyan rakhein, aapko exact key ya uska part enter karna hoga).");
+    }
+    return;
+  }
+
+  memKeys.splice(idx, 1);
+  mem._globalRunwareKeys = memKeys;
+  saveMemory(mem);
+
+  if (currentActiveRunwareKey === keyToRemove) {
+    currentRunwareClient = null;
+    currentActiveRunwareKey = null;
+  }
+
+  await bot.sendMessage(chatId, `✅ API Key \`${keyToRemove.substring(0, 6)}...\` remove kar di gayi hai!`, { parse_mode: 'Markdown' });
 });
 
 // ─── CALLBACK QUERY HANDLER (INLINE BUTTONS) ──────────────────────────────────
