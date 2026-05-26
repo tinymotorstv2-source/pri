@@ -793,9 +793,9 @@ async function generateWithPollinations(prompt, width = 768, height = 1024) {
     const seed = Math.floor(Math.random() * 1000000);
     console.log(`📡 Sending request to Pollinations.ai (Seed: ${seed}, ${width}x${height})...`);
     
-    // Pollinations flux-realism model: much better for realistic anatomy than standard flux
+    // Pollinations flux model: keyless, free, unlimited, uncensored
     // Using higher resolution for better anatomy detail
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=flux-realism&width=${width}&height=${height}`;
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=flux&width=${width}&height=${height}`;
     
     const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 60000 });
     const buffer = Buffer.from(res.data);
