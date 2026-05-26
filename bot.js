@@ -941,13 +941,16 @@ async function generateWithProdia(prompt, negativePrompt = '') {
 // and can handle rich, detailed prompts with specific anatomy tags.
 // Negative prompts are critical for avoiding bad anatomy.
 function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "") {
-  const skinTone = 'fair white'; // Forced as per user request
+  const skinTone = 'extremely fair milky white'; // Strongly forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
   const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
   const age = char?.age || 30;
-  // Enforce curvy figure for all ages
-  const bodyType = age >= 35 ? 'mature curvy figure' : (age <= 25 ? 'young curvy figure' : 'attractive curvy figure');
+  // Enforce curvy figure for all ages, but use char's specific body tags if available
+  const bodyTags = char?.bodyTags || (age >= 35 ? 'mature curvy figure' : 'attractive curvy figure');
+  const faceTags = char?.faceTags || 'beautiful face, seductive eyes';
+  const breastTags = char?.breastTags || 'large natural breasts';
+  const buttTags = char?.buttTags || 'curvy round backside, wide hips';
   
   let prompt = '';
   let negativePrompt = 'ugly, deformed, bad anatomy, extra limbs, mutated hands, blurry, low quality, worst quality, watermark, text, signature, cartoon, anime, 3d, illustration, drawing, painting, sketch, cg render';
@@ -956,46 +959,46 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
     const cleanDesc = visualDesc || "wearing seductive outfit";
     switch (category) {
       case 'breasts':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing deep cleavage, wearing seductive low-cut ${cleanDesc}, looking seductively at camera, bedroom setting, warm golden lighting, sharp focus, ultra detailed, professional photography, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking seductively at camera, bedroom setting, warm golden lighting, sharp focus, ultra detailed, professional photography, 8k`;
         break;
       case 'ass':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, ${bodyType} Indian woman viewed from behind, ${age} years old, ${hair}, wearing sexy tight ${cleanDesc}, showing curvy round backside and wide hips, soft thick thighs, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, Indian woman viewed from behind, ${age} years old, ${hair}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, soft thick thighs, ${skinTone} skin, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
         break;
       case 'pussy':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up, ${bodyType} Indian woman lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${skinTone} skin, soft warm bedroom lighting, sharp focus, ultra detailed, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up, Indian woman lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${bodyTags}, ${skinTone} skin, soft warm bedroom lighting, sharp focus, ultra detailed, 8k`;
         break;
       case 'face':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, wearing ${cleanDesc}, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${faceTags}, wearing ${cleanDesc}, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
         break;
       default:
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${faceTags}, ${bodyTags}, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
     }
     return { prompt, negativePrompt };
   }
   
   switch (category) {
     case 'pussy':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${bodyType} Indian woman lying on bed, legs spread wide open, showing detailed vulva, labia, smooth shaved skin, natural skin folds and texture, ${skinTone} skin, soft inner thighs, clean shaved smooth intimate area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous Indian woman lying on bed, legs spread wide open, showing detailed vulva, labia, smooth shaved skin, natural skin folds and texture, ${skinTone} skin, soft inner thighs, ${bodyTags}, clean shaved smooth intimate area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k`;
       negativePrompt += ', face, head, upper body, hands near crotch, extra fingers, clothes, clothing, bra, panties, underwear, censored, mosaic, pixelated';
       break;
     
     case 'ass':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, ${bodyType} Indian woman viewed from behind, ${age} years old, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, Indian woman viewed from behind, ${age} years old, bending over seductively, showing bare ${buttTags}, ${skinTone} skin, completely naked, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k`;
       negativePrompt += ', front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear';
       break;
     
     case 'breasts':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing large natural bare breasts, detailed nipples, cleavage, completely naked upper body, no bra, no clothes, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, no bra, no clothes, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
       negativePrompt += ', hands near face, legs, feet, clothes, clothing, bra, underwear, panties';
       break;
     
     case 'face':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, soft plump lips, looking at camera, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${faceTags}, looking at camera, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
       negativePrompt += ', body, hands, fingers, nudity, clothes';
       break;
     
     default:
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, completely naked, showing full nude body, large natural breasts, wide hips, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, completely naked, showing full nude body, ${faceTags}, ${breastTags}, ${buttTags}, ${bodyTags}, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
   }
   
   return { prompt, negativePrompt };
@@ -1009,48 +1012,49 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
 // Tested & proven: simple focused prompts produce perfect anatomy every time.
 function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc = "") {
   // Extract skin tone from character identity tags
-  const skinTone = 'fair white'; // Forced as per user request
+  const skinTone = 'extremely fair milky white'; // Strongly forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*)/i);
   const hair = hairDesc ? hairDesc[0] : 'dark hair';
   
   const age = char?.age || 30;
-  // Enforce curvy figure for all ages
-  const bodyType = age >= 35 ? 'mature curvy figure' : (age <= 25 ? 'young curvy figure' : 'attractive curvy figure');
+  const bodyTags = char?.bodyTags || (age >= 35 ? 'mature curvy figure' : 'attractive curvy figure');
+  const faceTags = char?.faceTags || 'beautiful face, seductive eyes';
+  const breastTags = char?.breastTags || 'large natural breasts';
+  const buttTags = char?.buttTags || 'curvy round backside, wide hips';
 
   // Handle clothing requests dynamically
   if (isClothingRequested) {
     const cleanDesc = visualDesc || "wearing seductive outfit";
     switch (category) {
       case 'breasts':
-        return `photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing cleavage, wearing seductive low-cut ${cleanDesc}, looking at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+        return `photo of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
       case 'ass':
-        return `photo of ${bodyType} Indian woman viewed from behind, wearing sexy tight ${cleanDesc}, showing curvy backside and hips, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+        return `photo of Indian woman viewed from behind, wearing sexy tight ${cleanDesc}, showing ${buttTags}, ${skinTone} skin, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
       case 'pussy':
-        return `intimate close-up photo, ${bodyType} Indian woman lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
+        return `intimate close-up photo, Indian woman lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${bodyTags}, ${skinTone} skin, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
       case 'face':
-        return `close-up portrait photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, wearing ${cleanDesc}, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
+        return `close-up portrait photo of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${faceTags}, wearing ${cleanDesc}, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
       default:
-        return `full body photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
+        return `full body photo of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${faceTags}, ${bodyTags}, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
     }
   }
   
   switch (category) {
     case 'pussy':
-      // PROVEN WORKING on FLUX: Using descriptive, high-quality, anatomically robust tags to prevent safety degradation or weird anatomy artifacts
-      return `intimate close-up photo of bare skin between legs, ${bodyType} Indian woman, legs spread wide open, detailed skin texture and natural folds, completely naked, ${skinTone} skin, clean shaved smooth skin, soft natural thighs, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
+      return `intimate close-up photo of bare skin between legs, Indian woman, legs spread wide open, detailed skin texture and natural folds, completely naked, ${skinTone} skin, clean shaved smooth skin, soft natural thighs, ${bodyTags}, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
     
     case 'ass':
-      return `photo of ${bodyType} Indian woman viewed from behind, bending over seductively, showing bare round backside, wide curvy hips, ${skinTone} skin, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+      return `photo of Indian woman viewed from behind, bending over seductively, showing bare ${buttTags}, ${skinTone} skin, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
     
     case 'breasts':
-      return `photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing bare chest, full natural curves, completely naked upper body, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+      return `photo of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
     
     case 'face':
-      return `close-up portrait photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, beautiful face, seductive eyes, sweet smile, looking at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
+      return `close-up portrait photo of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, ${faceTags}, looking at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
     
     default:
       // Full body
-      return `full body photo of gorgeous ${bodyType} Indian woman, ${age} years old, ${hair}, ${skinTone} skin, completely naked, showing full nude body, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
+      return `full body photo of gorgeous Indian woman, ${age} years old, ${hair}, ${skinTone} skin, completely naked, showing full nude body, ${faceTags}, ${breastTags}, ${buttTags}, ${bodyTags}, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
   }
 }
 
