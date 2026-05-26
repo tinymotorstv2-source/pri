@@ -935,13 +935,13 @@ async function safeEditMessage(chatId, messageId, text) {
   }
 }
 
-async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescription = null) {
+async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescription = null, forceCategory = null) {
   const mem = loadMemory();
   const user = getUser(mem, String(chatId));
 
   const char = CHARACTERS[characterId] || CHARACTERS.priya;
   const visualDesc = forceDescription || await getVisualDescription(history);
-  const category = forceDescription ? getFocusCategory([], forceDescription) : getFocusCategory(history, visualDesc);
+  const category = forceCategory || (forceDescription ? getFocusCategory([], forceDescription) : getFocusCategory(history, visualDesc));
   console.log(`📸 Image request category determined: ${category} for ${char.name}`);
 
   if (!forceDescription) {
@@ -1326,7 +1326,7 @@ bot.on('callback_query', async (callbackQuery) => {
     user.points += 2; // Clicking buttons earns intimacy points!
     saveMemory(mem);
 
-    await sendPriyaPhoto(chatId, user.history, characterId, forceDesc);
+    await sendPriyaPhoto(chatId, user.history, characterId, forceDesc, category);
   }
 
   // 2. Character selection
@@ -1453,7 +1453,7 @@ bot.on('message', async (msg) => {
       forceDesc = "medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, bedroom";
     }
 
-    await sendPriyaPhoto(chatId, user.history, user.character, forceDesc);
+    await sendPriyaPhoto(chatId, user.history, user.character, forceDesc, category);
     
     // Trigger memory update
     if (user.count % 8 === 0 && user.history.length >= 6) {
