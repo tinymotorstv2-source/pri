@@ -787,41 +787,27 @@ async function generateWithHF(prompt) {
   }
 }
 
-async function generateWithAirforce(prompt, modelName = 'z-image') {
+async function generateWithPollinations(prompt) {
   try {
-    console.log(`📡 Sending fallback request to api.airforce (Model: ${modelName})...`);
-    const response = await axios.post(
-      'https://api.airforce/v1/images/generations',
-      {
-        model: modelName,
-        prompt: prompt,
-        size: "768x1024",
-        response_format: "url"
-      },
-      {
-        headers: { 
-          'Authorization': `Bearer ${AIRFORCE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 45000
-      }
-    );
-
-    if (response.data && response.data.data && response.data.data[0]) {
-      const imgData = response.data.data[0];
-      if (imgData.url) {
-        console.log(`🎉 api.airforce image URL received: ${imgData.url}`);
-        const imgRes = await axios.get(imgData.url, { responseType: 'arraybuffer', timeout: 25000 });
-        return Buffer.from(imgRes.data);
-      } else if (imgData.b64_json) {
-        console.log(`🎉 api.airforce base64 image data received!`);
-        return Buffer.from(imgData.b64_json, 'base64');
-      }
+    const seed = Math.floor(Math.random() * 1000000);
+    console.log(`📡 Sending request to Pollinations.ai (Seed: ${seed})...`);
+    
+    // We use Pollinations' any-dark model which is keyless, free, and completely uncensored.
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=any-dark`;
+    
+    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 50000 });
+    const buffer = Buffer.from(res.data);
+    
+    const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
+    if (isImage) {
+      console.log(`🎉 Pollinations image generation successful (${buffer.length} bytes)!`);
+      return buffer;
+    } else {
+      console.error("❌ Pollinations response was not a valid image");
+      return null;
     }
-    console.error("❌ api.airforce response format invalid:", response.data);
-    return null;
   } catch (e) {
-    console.error("❌ api.airforce fallback generation error:", e.response?.data ? JSON.stringify(e.response.data) : e.message);
+    console.error("❌ Pollinations generation error:", e.message);
     return null;
   }
 }
@@ -1019,7 +1005,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ FLUX HUGGING FACE & AIRFORCE FALLBACK PIPELINE ═══
+  // ═══ FLUX HUGGING FACE & POLLINATIONS FALLBACK PIPELINE ═══
   let imageBuffer = null;
   let successModel = null;
 
@@ -1027,28 +1013,17 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
   console.log(`🎨 Optimized Flux Prompt: ${fluxPrompt}`);
 
-  if (category === 'pussy') {
-    // For pussy, try api.airforce first to get uncensored detailed anatomy, fallback to HF
-    if (AIRFORCE_API_KEY) {
-      console.log(`🎨 Stage 1 (Pussy Special): api.airforce z-image...`);
-      imageBuffer = await generateWithAirforce(fluxPrompt, 'z-image');
-    }
-    if (!imageBuffer) {
-      console.log(`🎨 Stage 2 (Pussy Fallback): Hugging Face FLUX.1-schnell...`);
-      imageBuffer = await generateWithHF(fluxPrompt);
-    }
-  } else {
-    // For other categories, try Hugging Face first for speed/quality, fallback to api.airforce
-    console.log(`🎨 Stage 1: Hugging Face FLUX.1-schnell...`);
-    imageBuffer = await generateWithHF(fluxPrompt);
+  // Stage 1: Hugging Face (FLUX.1-schnell — Fast & Uncensored)
+  console.log(`🎨 Stage 1: Hugging Face FLUX.1-schnell...`);
+  imageBuffer = await generateWithHF(fluxPrompt);
 
-    if (!imageBuffer && AIRFORCE_API_KEY) {
-      if (statusMsgId) {
-        await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
-      }
-      console.log(`🎨 Stage 2: api.airforce fallback...`);
-      imageBuffer = await generateWithAirforce(fluxPrompt, 'z-image');
+  // Stage 2: Pollinations.ai Fallback (any-dark — Keyless, Free, Uncensored Fallback)
+  if (!imageBuffer) {
+    if (statusMsgId) {
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
+    console.log(`🎨 Stage 2: Pollinations.ai fallback...`);
+    imageBuffer = await generateWithPollinations(fluxPrompt);
   }
 
   const opts = {
