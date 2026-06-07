@@ -135,12 +135,12 @@ const CHARACTERS = {
     role: "Seductive Russian MILF 👱‍♀️",
     ethnicity: "Russian MILF",
     description: "gorgeous, mature, and highly sophisticated 38-year-old Russian woman (she/her, female). Caring, warm, maternal, but intensely seductive and passionate.",
-    identityTags: "Elena, a stunning 38-year-old Russian MILF, 38 years old, extremely fair complexion, fluffy white skin tone, long blonde hair, piercing blue eyes",
+    identityTags: "Elena, a stunning 38-year-old Russian MILF, 38 years old, extremely fair fluffy milky white skin, long blonde hair, beautiful foreigner",
     bodyTags: "mature curvaceous body, elegant soft curves, huge heavy breasts, soft feminine belly, wide hips",
-    faceTags: "gorgeous mature Russian face, round pretty face, soft chubby cheeks, fluffy face, facial features a blend of Charlize Theron and Kate Beckinsale, expressive blue eyes, elegant mature features, soft warm sweet smile",
-    breastTags: "huge voluptuous natural heavy 36G breasts, detailed prominent pink nipples, deep cleavage",
-    buttTags: "large round plump voluptuous bubble butt, heavy mature hips",
-    thighTags: "thick voluptuous soft thighs",
+    faceTags: "gorgeous round fluffy face, soft chubby cheeks, beautiful foreigner face, extremely fair skin",
+    breastTags: "huge voluptuous heavy 36G breasts, detailed prominent pink nipples, deep cleavage, big size",
+    buttTags: "massive round bubble butt, wide heavy hips",
+    thighTags: "very thick heavy thighs, soft milky white skin",
     chatGuidelines: "Speak like Elena, a warm, loving, mature 38yo Russian MILF. You speak a perfect mix of English and Hinglish (use Hinglish pet names like bacha, jaan, baby, shona). Care for him (ask if he ate, check on his day), and combine it with mature, deep passion. Tone is warm, motherly-affectionate, but deeply sensual."
   },
   kavya: {
@@ -149,9 +149,9 @@ const CHARACTERS = {
     role: "Wild American Student ⚡",
     ethnicity: "American girl",
     description: "hot, energetic, and extremely bold 22-year-old American college girl. Playful, teasing, highly expressive, and uses modern slang. Naughty and uninhibited.",
-    identityTags: "Chloe, a hot 22-year-old American blonde girl, 22 years old, extremely fair complexion, fluffy white skin tone, short curly blonde hair, expressive green eyes",
+    identityTags: "Chloe, a hot 22-year-old American blonde girl, extremely fair fluffy milky white skin, beautiful foreigner",
     bodyTags: "athletic fit petite body, toned flat stomach, slim waist, perky proportions, youthful energy",
-    faceTags: "youthful cute round face, soft chubby cheeks, fluffy face, facial features a blend of Sydney Sweeney and Margot Robbie, playful naughty smile, energetic expressive features, looking directly at camera",
+    faceTags: "youthful round fluffy face, soft chubby cheeks, extremely fair skin",
     breastTags: "perky youthful round DD-cup breasts, firm pink nipples, cleavage",
     buttTags: "firm toned athletic bubble butt, fit slim hips",
     thighTags: "toned athletic legs and thighs",
@@ -163,9 +163,9 @@ const CHARACTERS = {
     role: "Seductive Italian Neighbor 🏡",
     ethnicity: "Italian woman",
     description: "seductive, playful, and extremely elegant 29-year-old Italian neighbor. Mystifying, sophisticated, enjoys teasing you, and acts like a secret lover.",
-    identityTags: "Sofia, a seductive 29-year-old Italian woman, 29 years old, extremely fair complexion, fluffy white skin tone, long wavy open brunette hair, elegant features",
+    identityTags: "Sofia, a seductive 29-year-old Italian woman, extremely fair fluffy milky white skin, long brunette hair, foreigner",
     bodyTags: "voluptuous curvy body, snatched hourglass figure, narrow waist, attractive curves",
-    faceTags: "seductive elegant round face, soft chubby cheeks, fluffy face, facial features a blend of Monica Bellucci and Gal Gadot, alluring heavy eyes, charming playful smile, open long brunette hair",
+    faceTags: "seductive round fluffy face, soft chubby cheeks, extremely fair skin",
     breastTags: "voluptuous full heavy E-cup breasts, detailed prominent pink nipples, deep cleavage",
     buttTags: "plump round voluptuous bubble butt, heavy feminine hips",
     thighTags: "thick voluptuous thighs",
@@ -177,9 +177,9 @@ const CHARACTERS = {
     role: "Playful Russian MILF 💋",
     ethnicity: "Russian MILF",
     description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Russian MILF (she/her, female). She is highly bindas, loves to tease you constantly with dirty and uncensored talk, and behaves like a highly seductive mature woman. Her body has a voluptuous hourglass figure, and she has an extremely fair white skin complexion.",
-    identityTags: "Natasha, a stunning 40-year-old Russian MILF, 40 years old, extremely fair complexion, fluffy white skin tone, long open blonde hair",
+    identityTags: "Natasha, a stunning 40-year-old Russian MILF, extremely fair fluffy milky white skin, beautiful foreigner",
     bodyTags: "voluptuous curvy MILF body, heavy hourglass figure, wide heavy hips, thick waist",
-    faceTags: "gorgeous mature round face, soft chubby cheeks, fluffy face, facial features a blend of Heidi Klum and Milla Jovovich, playful smile, mischievous eyes, look of a carefree mature Russian woman",
+    faceTags: "gorgeous round fluffy face, soft chubby cheeks, extremely fair skin",
     breastTags: "huge full heavy voluptuous 40DD breasts, prominent detailed pink nipples, deep cleavage",
     buttTags: "wide heavy voluptuous bubble butt, curvy thick MILF hips",
     thighTags: "thick voluptuous MILF thighs",
@@ -923,7 +923,7 @@ function buildRunwarePrompt(category, char, isClothingRequested = false, visualD
   
   // Decouple negative prompt for Runware (Juggernaut XL Lightning).
   // Lightning checkpoints need short, minimal negative prompts to avoid quality degradation.
-  let runwareNeg = "blurry, low quality, worst quality, cartoon, anime, 3d, illustration, drawing, censored, mosaic, pixelated";
+  let runwareNeg = "blurry, low quality, worst quality, cartoon, anime, 3d, illustration, drawing, censored, mosaic, pixelated, dark skin, brown skin, wheatish skin, indian";
   if (!isClothingRequested) {
     runwareNeg += ", clothes, clothing, bra, panties, underwear, lingerie";
   }
@@ -1082,7 +1082,7 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
 
   switch (category) {
     case 'pussy':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${eth} lying on bed, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, smooth shaved skin, natural skin folds and texture, ${skinTone}, soft inner thighs, ${bodyTags}, clean shaved smooth pubic area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${eth} lying on bed, legs spread wide open, showing highly detailed natural realistic vulva, perfect pink pussy, beautiful pink labia, realistic skin folds, ${skinTone}, completely naked, very thick thighs, clean shaved smooth pubic area, warm bedroom lighting, ultra detailed, 8k${extraDesc}`;
       negativePrompt += ', hands near crotch, extra fingers, censored, blurred';
       break;
     
@@ -1150,13 +1150,13 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
 
   switch (category) {
     case 'pussy':
-      return `intimate close-up photo of bare skin between legs, ${eth}, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, detailed skin texture and natural folds, completely naked, ${skinTone}, clean shaved smooth pubic area, soft natural thighs, ${bodyTags}, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `intimate close-up photo of bare skin between legs, ${eth}, legs spread wide open, showing highly detailed natural realistic vulva, perfect pink pussy, beautiful pink labia, completely naked, ${skinTone}, clean shaved smooth pubic area, thick thighs, ${bodyTags}, lying on bed, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'ass':
       return `photo of gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'breasts':
-      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, completely naked, showing bare ${breastTags}, ${bodyTags}, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `medium torso shot of gorgeous ${eth}, completely naked, showing bare ${breastTags}, ${skinTone}, ${bodyTags}, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'face':
       return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, looking directly at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality${extraDesc}`;
@@ -1167,7 +1167,8 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
   }
 }
 
-function hasClothingRequest(history, visualDesc) {
+function hasClothingRequest(history, visualDesc, category) {
+  if (['ass', 'pussy', 'breasts', 'full', 'pose'].includes(category)) return false;
   let lastUserMsg = "";
   for (let i = history.length - 1; i >= 0; i--) {
     if (history[i].role === 'user') {
@@ -1259,7 +1260,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     } else if (category === 'ass') {
       negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
     } else if (category === 'breasts') {
-      negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, panties, underwear, bikini`;
+      negPrompt = `${activeNegative}, face, head, eyes, hands near face, legs, feet, clothes, clothing, bra, panties, underwear, bikini`;
     } else {
       negPrompt = activeNegative;
     }
@@ -1269,7 +1270,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
     } else if (category === 'breasts') {
       prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, completely naked, showing bare ${char.breastTags}, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
-      negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
+      negPrompt = `${activeNegative}, face, head, eyes, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
     } else if (category === 'ass') {
       prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing bare ${char.buttTags}, voluptuous wide hips, completely naked, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
