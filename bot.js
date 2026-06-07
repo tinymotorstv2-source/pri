@@ -1074,13 +1074,21 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
   }
   
   // Nude/Uncensored prompts
+  
   const cleanDesc = cleanVisualDesc(visualDesc);
   const wardrobeDesc = user?.wardrobe || "";
+  const isWardrobeActive = wardrobeDesc.length > 0;
   const finalDesc = wardrobeDesc ? `${cleanDesc}, ${wardrobeDesc}` : cleanDesc;
   const extraDesc = finalDesc ? `, ${finalDesc}` : "";
   
-  // Force clothing negative tags and dark skin negative tags aggressively
-  negativePrompt += ', clothes, clothing, dressed, bra, panties, underwear, lingerie, bikini, top, skirt, saree, dress, shirt, dark skin, brown skin, tan, dusky, black skin, wheatish skin, dark complexion, tanned skin, censored, mosaic, pixelated';
+  // Force clothing negative tags ONLY IF wardrobe is NOT active
+  if (!isWardrobeActive) {
+    negativePrompt += ', clothes, clothing, dressed, bra, panties, underwear, lingerie, bikini, top, skirt, saree, dress, shirt';
+  }
+  
+  // Skin tone negative tags
+  negativePrompt += ', dark skin, brown skin, tan, dusky, black skin, wheatish skin, dark complexion, tanned skin, censored, mosaic, pixelated';
+
 
   switch (category) {
     case 'pussy':
@@ -1248,7 +1256,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const antiCartoonNegative = "cartoon, anime, 3d, illustration, drawing, painting, digital art, sketch, cg, 3d render, artwork, canvas, bad photo, cell shaded, anime style, manga, semi-realistic, 3d digital render";
   const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, cropped hands, malformed hands, malformed limbs, floating limbs, disconnected limbs, out of frame, bad eyes, crossed eyes, asymmetric eyes, lazy eye, multiple heads, cloned face, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`;
 
-  const isClothingRequested = forceDescription ? false : hasClothingRequest(history, visualDesc);
+  const isClothingRequested = (forceDescription && !user?.wardrobe) ? false : (hasClothingRequest(history, visualDesc) || !!(user?.wardrobe));
   const activeNegative = isClothingRequested
     ? `watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, bad eyes, crossed eyes, asymmetric eyes, malformed hands, malformed limbs, floating limbs, ugly feet, malformed feet, extra toes, ${antiCartoonNegative}`
     : baseNSFWNegative;
@@ -1751,13 +1759,13 @@ bot.on('callback_query', async (callbackQuery) => {
       // Fallback if no last visual description exists
       if (category === 'ass') {
         actionTxt = `Ruko jaan, ${char.name} piche ghum rahi hai aapke liye... 🍑🔥`;
-        forceDesc = `viewed from behind, bending over, showing bare ass, ${char.buttTags}, completely naked, exposed skin, bare buttocks, ${char.thighTags}, bedroom`;
+        forceDesc = `viewed from behind, bending over, showing bare ass, ${char.buttTags}, ${user.wardrobe || 'completely naked'}, bare buttocks, ${char.thighTags}, bedroom`;
       } else if (category === 'pussy') {
         actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
-        forceDesc = `intimate close-up photo, lying on bed, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth pubic area, ${char.thighTags}, bedroom`;
+        forceDesc = `intimate close-up photo, lying on bed, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, bare skin between thighs, detailed natural skin texture and folds, ${user.wardrobe || 'completely naked'}, clean shaved smooth pubic area, ${char.thighTags}, bedroom`;
       } else if (category === 'breasts') {
         actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
-        forceDesc = `medium shot, showing bare ${char.breastTags}, bare chest, completely naked, exposed breasts, ${char.bodyTags}, bedroom`;
+        forceDesc = `medium shot, showing bare ${char.breastTags}, bare chest, ${user.wardrobe || 'completely naked'}, exposed breasts, ${char.bodyTags}, bedroom`;
       } else if (category === 'face') {
         actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
         forceDesc = `close-up portrait, ${char.faceTags}, looking directly at camera, bedroom`;
