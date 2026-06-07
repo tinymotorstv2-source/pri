@@ -137,7 +137,7 @@ const CHARACTERS = {
     description: "gorgeous, mature, and highly sophisticated 38-year-old Russian woman (she/her, female). Caring, warm, maternal, but intensely seductive and passionate.",
     identityTags: "Elena, a stunning 38-year-old Russian MILF, 38 years old, extremely fair complexion, fluffy white skin tone, long blonde hair, piercing blue eyes",
     bodyTags: "mature curvaceous body, elegant soft curves, huge heavy breasts, soft feminine belly, wide hips",
-    faceTags: "gorgeous mature Russian face, round pretty face, soft chubby cheeks, fluffy face, expressive blue eyes, elegant mature features, soft warm sweet smile",
+    faceTags: "gorgeous mature Russian face, round pretty face, soft chubby cheeks, fluffy face, facial features a blend of Charlize Theron and Kate Beckinsale, expressive blue eyes, elegant mature features, soft warm sweet smile",
     breastTags: "huge voluptuous natural heavy 36G breasts, detailed prominent pink nipples, deep cleavage",
     buttTags: "large round plump voluptuous bubble butt, heavy mature hips",
     thighTags: "thick voluptuous soft thighs",
@@ -151,7 +151,7 @@ const CHARACTERS = {
     description: "hot, energetic, and extremely bold 22-year-old American college girl. Playful, teasing, highly expressive, and uses modern slang. Naughty and uninhibited.",
     identityTags: "Chloe, a hot 22-year-old American blonde girl, 22 years old, extremely fair complexion, fluffy white skin tone, short curly blonde hair, expressive green eyes",
     bodyTags: "athletic fit petite body, toned flat stomach, slim waist, perky proportions, youthful energy",
-    faceTags: "youthful cute round face, soft chubby cheeks, fluffy face, playful naughty smile, energetic expressive features, looking directly at camera",
+    faceTags: "youthful cute round face, soft chubby cheeks, fluffy face, facial features a blend of Sydney Sweeney and Margot Robbie, playful naughty smile, energetic expressive features, looking directly at camera",
     breastTags: "perky youthful round DD-cup breasts, firm pink nipples, cleavage",
     buttTags: "firm toned athletic bubble butt, fit slim hips",
     thighTags: "toned athletic legs and thighs",
@@ -165,7 +165,7 @@ const CHARACTERS = {
     description: "seductive, playful, and extremely elegant 29-year-old Italian neighbor. Mystifying, sophisticated, enjoys teasing you, and acts like a secret lover.",
     identityTags: "Sofia, a seductive 29-year-old Italian woman, 29 years old, extremely fair complexion, fluffy white skin tone, long wavy open brunette hair, elegant features",
     bodyTags: "voluptuous curvy body, snatched hourglass figure, narrow waist, attractive curves",
-    faceTags: "seductive elegant round face, soft chubby cheeks, fluffy face, alluring heavy eyes, charming playful smile, open long brunette hair",
+    faceTags: "seductive elegant round face, soft chubby cheeks, fluffy face, facial features a blend of Monica Bellucci and Gal Gadot, alluring heavy eyes, charming playful smile, open long brunette hair",
     breastTags: "voluptuous full heavy E-cup breasts, detailed prominent pink nipples, deep cleavage",
     buttTags: "plump round voluptuous bubble butt, heavy feminine hips",
     thighTags: "thick voluptuous thighs",
@@ -179,7 +179,7 @@ const CHARACTERS = {
     description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Russian MILF (she/her, female). She is highly bindas, loves to tease you constantly with dirty and uncensored talk, and behaves like a highly seductive mature woman. Her body has a voluptuous hourglass figure, and she has an extremely fair white skin complexion.",
     identityTags: "Natasha, a stunning 40-year-old Russian MILF, 40 years old, extremely fair complexion, fluffy white skin tone, long open blonde hair",
     bodyTags: "voluptuous curvy MILF body, heavy hourglass figure, wide heavy hips, thick waist",
-    faceTags: "gorgeous mature round face, soft chubby cheeks, fluffy face, playful smile, mischievous eyes, look of a carefree mature Russian woman",
+    faceTags: "gorgeous mature round face, soft chubby cheeks, fluffy face, facial features a blend of Heidi Klum and Milla Jovovich, playful smile, mischievous eyes, look of a carefree mature Russian woman",
     breastTags: "huge full heavy voluptuous 40DD breasts, prominent detailed pink nipples, deep cleavage",
     buttTags: "wide heavy voluptuous bubble butt, curvy thick MILF hips",
     thighTags: "thick voluptuous MILF thighs",
@@ -890,8 +890,8 @@ async function generateWithRunware(prompt, negativePrompt = '') {
         height: 1024,
         numberResults: 1,
         outputType: ["URL"],
-        steps: 25,
-        CFGScale: 7
+        steps: 6,
+        CFGScale: 2.0
       });
 
       if (image && image[0] && image[0].imageURL) {
@@ -1046,10 +1046,10 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
     const cleanDesc = visualDesc || "wearing seductive outfit";
     switch (category) {
       case 'breasts':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking seductively at camera, bedroom setting, warm golden lighting, sharp focus, ultra detailed, professional photography, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking seductively at camera, bedroom setting, warm golden lighting, sharp focus, ultra detailed, professional photography, 8k`;
         break;
       case 'ass':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, ${eth} viewed from behind, ${age} years old, ${hair}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, soft thick thighs, ${skinTone}, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
+        prompt = `masterpiece, best quality, photorealistic, RAW photo, ${eth} viewed from behind, ${age} years old, ${hair}, ${faceTags}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, soft thick thighs, ${skinTone}, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
         break;
       case 'pussy':
         prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up, ${eth} lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${bodyTags}, ${skinTone}, soft warm bedroom lighting, sharp focus, ultra detailed, 8k`;
@@ -1072,17 +1072,17 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
 
   switch (category) {
     case 'pussy':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${eth} lying on bed, legs spread wide open, showing detailed shaved pink pussy, clean shaved pink vulva, pink labia, clitoris, smooth shaved skin, natural skin folds and texture, ${skinTone}, soft inner thighs, ${bodyTags}, clean shaved smooth intimate area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${eth} lying on bed, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, smooth shaved skin, natural skin folds and texture, ${skinTone}, soft inner thighs, ${bodyTags}, clean shaved smooth pubic area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k${extraDesc}`;
       negativePrompt += ', face, head, upper body, hands near crotch, extra fingers';
       break;
     
     case 'ass':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, ${eth} viewed from behind, ${age} years old, bending over seductively, showing bare ${buttTags}, ${skinTone}, completely naked, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, ${eth} viewed from behind, ${age} years old, bending over seductively, ${faceTags}, showing bare ${buttTags}, ${skinTone}, completely naked, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
       negativePrompt += ', front view, face facing forward, front torso';
       break;
     
     case 'breasts':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
       negativePrompt += ', hands near face, legs, feet';
       break;
     
@@ -1123,9 +1123,9 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
     const cleanDesc = visualDesc || "wearing seductive outfit";
     switch (category) {
       case 'breasts':
-        return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+        return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
       case 'ass':
-        return `photo of ${eth} viewed from behind, wearing sexy tight ${cleanDesc}, showing ${buttTags}, ${skinTone}, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
+        return `photo of ${eth} viewed from behind, ${faceTags}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, ${skinTone}, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
       case 'pussy':
         return `intimate close-up photo, ${eth} lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${bodyTags}, ${skinTone}, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
       case 'face':
@@ -1140,13 +1140,13 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
 
   switch (category) {
     case 'pussy':
-      return `intimate close-up photo of bare skin between legs, ${eth}, legs spread wide open, showing detailed shaved pink pussy, clean shaved pink vulva, pink labia, clitoris, detailed skin texture and natural folds, completely naked, ${skinTone}, clean shaved smooth skin, soft natural thighs, ${bodyTags}, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `intimate close-up photo of bare skin between legs, ${eth}, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, detailed skin texture and natural folds, completely naked, ${skinTone}, clean shaved smooth pubic area, soft natural thighs, ${bodyTags}, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'ass':
-      return `photo of ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, ${skinTone}, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `photo of ${eth} viewed from behind, bending over seductively, ${faceTags}, showing bare ${buttTags}, ${skinTone}, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'breasts':
-      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'face':
       return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, looking directly at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality${extraDesc}`;
@@ -1243,7 +1243,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   const qualityTags = "photorealistic, highly detailed, perfect anatomy, perfect hands, perfect eyes, realistic eyes, cinematic lighting, sharp focus, 4k, masterpiece, best quality, RAW photo, professional photography";
 
   if (forceDescription) {
-    prompt = `${forceDescription}, ${identityTags}, ${qualityTags}`;
+    prompt = `${forceDescription}, ${identityTags}, ${category !== 'pussy' ? char.faceTags + ', ' : ''}${qualityTags}`;
     if (category === 'pussy') {
       negPrompt = `${activeNegative}, face, head, upper body, clothes, clothing, bra, panties, underwear, bikini`;
     } else if (category === 'ass') {
@@ -1258,13 +1258,13 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
     } else if (category === 'breasts') {
-      prompt = `${visualDesc}, medium shot, ${identityTags}, showing ${char.breastTags}, bare chest, completely naked, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
+      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, showing ${char.breastTags}, bare chest, completely naked, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
     } else if (category === 'ass') {
-      prompt = `${visualDesc}, medium full shot viewed from behind, ${identityTags}, head turned looking back over shoulder seductively at camera, showing bare round backside, ${char.buttTags}, bending slightly forward, completely naked, ${char.thighTags}, soft warm lighting, ${qualityTags}`;
+      prompt = `${visualDesc}, medium full shot viewed from behind, ${identityTags}, head turned looking back over shoulder seductively at camera, ${char.faceTags}, showing bare round backside, ${char.buttTags}, bending slightly forward, completely naked, ${char.thighTags}, soft warm lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
     } else if (category === 'pussy') {
-      prompt = `${visualDesc}, intimate close-up photo, lying on bed, legs spread wide open, ${identityTags}, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth skin, ${char.thighTags}, soft warm bedroom lighting, ${qualityTags}`;
+      prompt = `${visualDesc}, intimate close-up photo, lying on bed, legs spread wide open, ${identityTags}, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth pubic area, showing highly detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, soft warm bedroom lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, face, head, upper body, clothes, clothing, bra, panties, underwear, bikini`;
     } else {
       prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, showing ${char.breastTags}, completely naked, full body nudity, looking at camera, ${qualityTags}`;
