@@ -1781,6 +1781,82 @@ bot.on('callback_query', async (callbackQuery) => {
     await sendPriyaPhoto(chatId, user.history, characterId, forceDesc, category);
   }
 
+  
+  // 5. Wardrobe selection
+  if (data.startsWith('wardrobe_')) {
+    const outfit = data.replace('wardrobe_', '');
+    
+    let outfitDesc = "";
+    let outfitTxt = "";
+    if (outfit === 'saree') {
+      outfitDesc = "wearing sexy revealing Indian saree, low-cut blouse, deep cleavage";
+      outfitTxt = "Mmm... maine tumhare liye yeh tight aur deep cleavage wali saree pehan li hai. Ab dekhte hain class mein kaun dhyan deta hai... 👩‍🏫💦";
+    } else if (outfit === 'nurse') {
+      outfitDesc = "wearing tight sexy short nurse outfit, deep cleavage, nurse cap";
+      outfitTxt = "Hello patient... maine apni short nurse dress aur stockings pehan li hain. Aajao, aaj main tumhara sara dard nikal dungi... 👩‍⚕️💊";
+    } else if (outfit === 'gym') {
+      outfitDesc = "wearing extremely tight yoga pants, sexy sports bra, sweaty gym girl";
+      outfitTxt = "Uff kitna pasina aaya hai... main apne in tight yoga pants aur sports bra mein bahut garam mehsus kar rahi hoon. Dekhoge? 🏋️‍♀️🔥";
+    } else if (outfit === 'maid') {
+      outfitDesc = "wearing sexy french maid outfit, short skirt, deep cleavage";
+      outfitTxt = "Sir... maine apni yeh chhoti si french maid outfit pehan li hai jisme sab dikh raha hai. Bataiye aaj kya saaf karna hai? 🧹💋";
+    } else if (outfit === 'naked') {
+      outfitDesc = "";
+      outfitTxt = "Uff... maine ek-ek karke apne saare kapde nikal diye. Ab mera nanga gora badan sirf tumhara hai... 👙🔥";
+    }
+    
+    user.wardrobe = outfitDesc;
+    user.history.push({ role: 'user', content: `Wear the ${outfit} outfit` });
+    user.history.push({ role: 'assistant', content: outfitTxt });
+    saveMemory(mem);
+    
+    await bot.sendMessage(chatId, outfitTxt);
+    
+    // Generate a photo to show the new outfit
+    await sendPriyaPhoto(chatId, user.history, user.character, null, 'default', user);
+  }
+
+  // 6. Snapchat Mode (View Once)
+  if (data === 'snapchat_mode') {
+    const char = CHARACTERS[user.character] || CHARACTERS.priya;
+    await bot.sendMessage(chatId, `👻 **Snapchat Mode Activated!**\n\nAgli photo jo main bhejungi wo sirf 15 seconds ke liye dikhegi, uske baad hamesha ke liye delete ho jayegi. Ready? 😏📸`);
+    
+    // Send photo then delete
+    const categories = ['breasts', 'ass', 'pussy'];
+    const category = categories[Math.floor(Math.random() * categories.length)];
+    
+    let forceDesc = "";
+    if (category === 'ass') {
+      forceDesc = `viewed from behind, bending over, showing bare ass, ${char.buttTags}, completely naked, exposed skin, bare buttocks, ${char.thighTags}, bedroom`;
+    } else if (category === 'pussy') {
+      forceDesc = `intimate close-up photo, lying on bed, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth pubic area, ${char.thighTags}, bedroom`;
+    } else {
+      forceDesc = `medium shot, showing bare ${char.breastTags}, bare chest, completely naked, exposed breasts, ${char.bodyTags}, bedroom`;
+    }
+    
+    const sentMsg = await bot.sendMessage(chatId, `📸 Photo aane wali hai...`);
+    
+    // Use Runware exclusively for snapchat to be fast
+    let imageBuffer = null;
+    const runwarePromptData = buildRunwarePrompt(category, char, false, forceDesc, user);
+    imageBuffer = await generateWithRunware(runwarePromptData.prompt, runwarePromptData.negativePrompt);
+    
+    if (imageBuffer) {
+      await bot.deleteMessage(chatId, sentMsg.message_id);
+      const photoMsg = await bot.sendPhoto(chatId, imageBuffer, { caption: "👻 Snapchat View! (Self-destructing in 15s...)" });
+      
+      setTimeout(async () => {
+        try {
+          await bot.deleteMessage(chatId, photoMsg.message_id);
+          await bot.sendMessage(chatId, "👻 *Snapchat deleted!* Uff, I hope you liked that quick tease jaan... 💦", { parse_mode: "Markdown" });
+        } catch (e) { console.error("Snapchat delete failed"); }
+      }, 15000);
+    } else {
+      await bot.editMessageText("Server busy hai jaan, snapchat baad me bhejti hu", { chat_id: chatId, message_id: sentMsg.message_id });
+    }
+  }
+
+
   // 2. Character selection
   if (data.startsWith('select_char_')) {
     const charId = data.replace('select_char_', '');
