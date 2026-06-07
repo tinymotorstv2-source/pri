@@ -1372,7 +1372,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
           { text: "Zoom In Face 🔍", callback_data: `photo_face_${characterId}` }
         ],
         [
-          { text: "Snapchat Mode 👻 (5s)", callback_data: "snapchat_mode" },
+          { text: "Snapchat Mode 👻 (15s)", callback_data: "snapchat_mode" },
           { text: "Wardrobe 👗", callback_data: "wardrobe_naked" }
         ],
         [
@@ -1945,10 +1945,13 @@ bot.on('message', async (msg) => {
       await bot.sendChatAction(chatId, 'record_voice');
       try {
         // Clean text for TTS (remove emojis)
-        const cleanText = reply.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+        let cleanText = reply.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+        // Add some realistic pauses and moans to the text for TTS
+        if (Math.random() > 0.5) cleanText = "Uff... aahh... " + cleanText;
+        cleanText = cleanText.replace(/\.\.\./g, ", ").replace(/\*/g, "");
         // Google TTS allows max 200 chars per request, so we chunk it or just take first part
         const url = googleTTS.getAudioUrl(cleanText.substring(0, 200), {
-          lang: 'hi', // Hindi for Hinglish accent
+          lang: 'hi-IN', // Indian Hindi/English accent for realistic feel
           slow: false,
           host: 'https://translate.google.com',
         });
