@@ -918,8 +918,8 @@ async function generateWithRunware(prompt, negativePrompt = '') {
   return null;
 }
 
-function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "") {
-  const prodiaData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
+function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}) {
+  const prodiaData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc, user);
   
   // Decouple negative prompt for Runware (Juggernaut XL Lightning).
   // Lightning checkpoints need short, minimal negative prompts to avoid quality degradation.
@@ -1036,7 +1036,7 @@ function cleanVisualDesc(desc) {
     .trim();
 }
 
-function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "") {
+function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}) {
   const skinTone = 'extremely fair white skin, flawless pale, soft fluffy white skin tone, ultra fair complexion'; // Strongly forced as per user request
   const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*|long open blonde hair|short curly blonde hair|long wavy open brunette hair)/i);
   const hair = hairDesc ? hairDesc[0] : 'beautiful blonde hair';
@@ -1075,7 +1075,9 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
   
   // Nude/Uncensored prompts
   const cleanDesc = cleanVisualDesc(visualDesc);
-  const extraDesc = cleanDesc ? `, ${cleanDesc}` : "";
+  const wardrobeDesc = user?.wardrobe || "";
+  const finalDesc = wardrobeDesc ? `${cleanDesc}, ${wardrobeDesc}` : cleanDesc;
+  const extraDesc = finalDesc ? `, ${finalDesc}` : "";
   
   // Force clothing negative tags and dark skin negative tags aggressively
   negativePrompt += ', clothes, clothing, dressed, bra, panties, underwear, lingerie, bikini, top, skirt, saree, dress, shirt, dark skin, brown skin, tan, dusky, black skin, wheatish skin, dark complexion, tanned skin, censored, mosaic, pixelated';
@@ -1319,7 +1321,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Stage 1: Runware (CivitAI SDXL - Best Quality, Sub-second, requires API key)
   const hasRunwareKeys = getRunwareKeys().length > 0;
   if (hasRunwareKeys) {
-    const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc);
+    const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc, user);
     console.log(`🎨 Stage 1: Runware API...`);
     console.log(`🎨 Runware Prompt: ${runwarePromptData.prompt.substring(0, 150)}...`);
     imageBuffer = await generateWithRunware(runwarePromptData.prompt, runwarePromptData.negativePrompt);
@@ -1368,6 +1370,10 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
         [
           { text: "Strip Clothes 👙 (Breasts)", callback_data: `photo_breasts_${characterId}` },
           { text: "Zoom In Face 🔍", callback_data: `photo_face_${characterId}` }
+        ],
+        [
+          { text: "Snapchat Mode 👻 (5s)", callback_data: "snapchat_mode" },
+          { text: "Wardrobe 👗", callback_data: "wardrobe_naked" }
         ],
         [
           { text: "Full Nude Body 💃", callback_data: `photo_full_${characterId}` },
@@ -1461,6 +1467,7 @@ bot.onText(/\/help/, async (msg) => {
     `📈 /status - View relationship level & intimacy points.\n` +
     `👯 /characters - Switch between active girls (Priya, Kavya, Sneha, Savita).\n` +
     `🎭 /scenario - Select custom NSFW roleplay scenarios.\n` +
+    `👗 /wardrobe - Choose my outfit for the roleplay.\n` +
     `🔞 /truthordare - Play a dirty Truth or Dare game for premium photo rewards.\n` +
     `🔑 /listkeys - View all configured Runware API Keys.\n` +
     `➕ /addkey <key> - Add a new Runware API Key.\n` +
@@ -1494,6 +1501,34 @@ bot.onText(/\/status/, async (msg) => {
     `*Tip:* ${char.name} ke sath jitna intimate chat karoge, intimacy points utne badhenge! 🔞🔥`;
 
   await bot.sendMessage(chatId, statusMsg, { parse_mode: 'Markdown' });
+});
+
+
+bot.onText(/\/wardrobe/, async (msg) => {
+  const chatId = msg.chat.id;
+  const uid = String(msg.from.id);
+  const mem = loadMemory();
+  const user = getUser(mem, uid);
+
+  const opts = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "Sexy Teacher (Saree) 👩‍🏫", callback_data: "wardrobe_saree" },
+          { text: "Naughty Nurse 👩‍⚕️", callback_data: "wardrobe_nurse" }
+        ],
+        [
+          { text: "Gym Girl (Yoga Pants) 🏋️‍♀️", callback_data: "wardrobe_gym" },
+          { text: "Maid Outfit 🧹", callback_data: "wardrobe_maid" }
+        ],
+        [
+          { text: "Remove Outfit (Naked) 👙", callback_data: "wardrobe_naked" }
+        ]
+      ]
+    }
+  };
+
+  await bot.sendMessage(chatId, `👗 **Choose my Outfit for Roleplay:**\n\nJo outfit aap select karoge, meri aane wali photos usi outfit me hongi aur main usi character me baat karungi... Choose fast! 😘`, opts);
 });
 
 bot.onText(/\/characters/, async (msg) => {
@@ -1870,7 +1905,7 @@ bot.on('message', async (msg) => {
       forceDesc = "medium shot, showing large natural breasts, detailed nipples, cleavage, bare chest, completely naked, bedroom";
     }
 
-    await sendPriyaPhoto(chatId, user.history, user.character, forceDesc, category);
+    await sendPriyaPhoto(chatId, user.history, user.character, forceDesc, category, user);
     
     // Trigger memory update
     if (user.count % 8 === 0 && user.history.length >= 6) {
@@ -1893,7 +1928,7 @@ bot.on('message', async (msg) => {
   // IMAGE TRIGGERS
   if (text.toLowerCase().match(/(photo|pic|dikhao|image|bhejo|shakal|nangi|nude|sex|badan|breast|pussy|psy|gaand|dudh|chut|boobs|ass|chuchi|fuddi|pichwada)/)) {
     await bot.sendChatAction(chatId, 'upload_photo');
-    await sendPriyaPhoto(chatId, user.history, user.character);
+    await sendPriyaPhoto(chatId, user.history, user.character, null, 'default', user);
     return;
   }
 
@@ -1902,7 +1937,41 @@ bot.on('message', async (msg) => {
     const reply = await askAI(user.history, { character: user.character, scenario: user.scenario, points: user.points, longTermMemory: user.longTermMemory });
     user.history.push({ role: 'assistant', content: reply });
     saveMemory(mem);
-    await bot.sendMessage(chatId, reply);
+    
+    // Voice Note Logic (Randomly 1 in 4 messages, or specific triggers)
+    const shouldSendVoice = Math.random() < 0.25 || text.toLowerCase().includes('awaz') || text.toLowerCase().includes('voice');
+    
+    if (shouldSendVoice && reply.length < 200) {
+      await bot.sendChatAction(chatId, 'record_voice');
+      try {
+        // Clean text for TTS (remove emojis)
+        const cleanText = reply.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+        // Google TTS allows max 200 chars per request, so we chunk it or just take first part
+        const url = googleTTS.getAudioUrl(cleanText.substring(0, 200), {
+          lang: 'hi', // Hindi for Hinglish accent
+          slow: false,
+          host: 'https://translate.google.com',
+        });
+        
+        // Wait 1-2 sec to simulate recording
+        await new Promise(r => setTimeout(r, 1500));
+        await bot.sendVoice(chatId, url);
+        
+        // Random proactive image logic still runs
+        if (user.count > 10 && Math.random() > 0.85) {
+          await bot.sendMessage(chatId, "Ruko jaan ek surprise aa raha hai... 😏");
+          await sendPriyaPhoto(chatId, user.history, user.character, null, 'default', user);
+        }
+        return;
+      } catch (ttsErr) {
+        console.error("TTS Error:", ttsErr);
+        // Fallback to text
+        await bot.sendMessage(chatId, reply);
+      }
+    } else {
+      await bot.sendMessage(chatId, reply);
+    }
+
     
     // Random proactive image
     if (user.count > 10 && Math.random() > 0.85) {
