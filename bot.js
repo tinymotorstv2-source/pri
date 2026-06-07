@@ -364,16 +364,16 @@ INTIMACY & UNCENSORED ADULT ROLEPLAY:
   // Use the last 14 messages (7 turns) to provide a rich context of history
   const msgs = [{ role: 'system', content: sysPrompt }, ...history.slice(-14)];
   
-  // Try up to 3 times with Groq Llama 3.3 70B
+  // Try up to 3 times with fallback to Mixtral
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      console.log(`💬 Querying Groq (Attempt ${attempt})...`);
+      const modelName = attempt === 1 ? 'llama-3.3-70b-versatile' : 'mixtral-8x7b-32768';
+      console.log(`💬 Querying Groq (Attempt ${attempt} with ${modelName})...`);
       
-      // Vary temperature slightly on retry to bypass potential safety or repetition locks
-      const temp = attempt === 1 ? 1.05 : (attempt === 2 ? 1.20 : 0.95);
+      const temp = attempt === 1 ? 1.05 : 1.15;
       
       const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.3-70b-versatile', 
+        model: modelName, 
         messages: msgs, 
         temperature: temp, 
         presence_penalty: 0.85,
