@@ -919,6 +919,20 @@ async function generateWithRunware(prompt, negativePrompt = '') {
 }
 
 
+
+function cleanVisualDesc(desc) {
+  if (!desc) return "";
+  return desc
+    .replace(/\b(close-up portrait|medium shot|medium full shot|full body shot|front view|viewed from behind|back view|close-up shot of crotch)\b/gi, '')
+    .replace(/\b(lying on bed|kneeling on bed|bending over|standing|sitting|kneeling|legs spread|legs open|legs spread wide open|legs spread wide)\b/gi, '')
+    .replace(/\b(showing ass|showing bare ass|showing pussy|showing detailed pussy|showing bare breasts|showing large breasts|cleavage|bare chest)\b/gi, '')
+    .replace(/\b(completely naked|nude|naked)\b/gi, '')
+    .replace(/\b(wearing|wear|clothed|clothes|clothing|outfit|saree|sari|dress|skirt|jeans|top|lingerie|bikini|nighty|gown|suit|salwar|kurti|bra|panties|pant|shirt|t-shirt|panty|kapde|kapda|undergarments|underwear|fabric|lace)\b/gi, '')
+    .replace(/,\s*,/g, ',')
+    .replace(/^,|,$/g, '')
+    .trim();
+}
+
 function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}, forceDescription = null) {
   const skinTone = 'flawless pale white skin';
   const qual = 'masterpiece, photorealistic, RAW photo, highly detailed, 8k';
