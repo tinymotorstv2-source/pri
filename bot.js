@@ -918,204 +918,62 @@ async function generateWithRunware(prompt, negativePrompt = '') {
   return null;
 }
 
-function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}) {
-  const prodiaData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc, user);
+
+function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}, forceDescription = null) {
+  const skinTone = 'flawless pale white skin';
+  const qual = 'masterpiece, photorealistic, RAW photo, highly detailed, 8k';
   
-  // Decouple negative prompt for Runware (Juggernaut XL Lightning).
-  // Lightning checkpoints need short, minimal negative prompts to avoid quality degradation.
-  let runwareNeg = "blurry, low quality, worst quality, cartoon, anime, 3d, illustration, drawing, censored, mosaic, pixelated, dark skin, brown skin, wheatish skin, indian";
-  if (!isClothingRequested) {
-    runwareNeg += ", clothes, clothing, bra, panties, underwear, lingerie";
+  let p = "";
+  let n = "blurry, low quality, worst quality, cartoon, anime, illustration, censored, dark skin, indian";
+  
+  const wardrobe = user?.wardrobe || "";
+  const clothesStr = isClothingRequested ? (wardrobe || visualDesc || "wearing seductive outfit") : "completely naked";
+
+  if (!isClothingRequested) n += ", clothes, clothing, bra, panties, underwear";
+
+  // If a button was clicked, use the exact forceDescription directly
+  if (forceDescription) {
+    p = `${qual}, ${forceDescription}, ${char.identityTags}`;
+    if (category === 'pussy') n += ", hands near crotch, abstract, deformed";
+    if (category === 'pose') n += ", standing, sitting, vertical";
+    return { prompt: p, negativePrompt: n };
   }
-  
-  return {
-    prompt: prodiaData.prompt,
-    negativePrompt: runwareNeg
-  };
-}
 
-// ─── PRODIA API ENGINE (SDXL — Best Quality NSFW) ────────────────────────────
-async function generateWithProdia(prompt, negativePrompt = '') {
-  if (!PRODIA_KEY) {
-    console.log('⚠️ No PRODIA_KEY set, skipping Prodia...');
-    return null;
-  }
-  try {
-    const seed = Math.floor(Math.random() * 2147483647);
-    console.log(`📡 Sending request to Prodia SDXL (Seed: ${seed})...`);
-    
-    // Start generation job using SDXL endpoint with a top realistic model
-    const jobRes = await axios.post('https://api.prodia.com/v1/sdxl/generate', {
-      model: "realvisxlV40_v40Bakedvae.safetensors [d405e613]",
-      prompt: prompt,
-      negative_prompt: negativePrompt || "ugly, deformed, bad anatomy, extra limbs, mutated hands, blurry, low quality, worst quality, watermark, text, cartoon, anime, 3d, illustration",
-      steps: 25,
-      cfg_scale: 7,
-      seed: seed,
-      sampler: "DPM++ 2M Karras",
-      width: 768,
-      height: 1024
-    }, {
-      headers: {
-        'X-Prodia-Key': PRODIA_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      timeout: 15000
-    });
-
-    const jobId = jobRes.data.job;
-    if (!jobId) {
-      console.error('❌ Prodia: No job ID returned:', jobRes.data);
-      return null;
-    }
-    console.log(`⏳ Prodia job started: ${jobId}`);
-
-    // Poll for completion (max 30 seconds)
-    let attempts = 0;
-    while (attempts < 15) {
-      await new Promise(r => setTimeout(r, 2000));
-      attempts++;
-      
-      const statusRes = await axios.get(`https://api.prodia.com/v1/job/${jobId}`, {
-        headers: { 'X-Prodia-Key': PRODIA_KEY },
-        timeout: 10000
-      });
-      
-      const status = statusRes.data.status;
-      
-      if (status === 'succeeded') {
-        const imageUrl = statusRes.data.imageUrl;
-        console.log(`🎉 Prodia generation succeeded! Downloading from: ${imageUrl}`);
-        
-        // Download the image
-        const imgRes = await axios.get(imageUrl, {
-          responseType: 'arraybuffer',
-          timeout: 15000
-        });
-        
-        const buffer = Buffer.from(imgRes.data);
-        const isImage = (buffer[0] === 0xFF && buffer[1] === 0xD8) || (buffer[0] === 0x89 && buffer[1] === 0x50);
-        if (isImage && buffer.length > 5000) {
-          console.log(`🎉 Prodia image downloaded successfully (${buffer.length} bytes)!`);
-          return buffer;
-        } else {
-          console.error('❌ Prodia: Downloaded data is not a valid image');
-          return null;
-        }
-      } else if (status === 'failed') {
-        console.error('❌ Prodia job failed:', statusRes.data);
-        return null;
-      }
-      // status is 'queued' or 'generating' — keep polling
-    }
-    
-    console.error('❌ Prodia: Timed out waiting for job completion');
-    return null;
-  } catch (e) {
-    const errMsg = e.response?.data ? JSON.stringify(e.response.data) : e.message;
-    console.error('❌ Prodia generation error:', errMsg.substring(0, 300));
-    return null;
-  }
-}
-
-// ─── PRODIA-OPTIMIZED PROMPT BUILDER (SD/SDXL — handles long detailed prompts) ─
-// Unlike FLUX (4 steps, short prompts only), Prodia SDXL uses 25+ steps
-// and can handle rich, detailed prompts with specific anatomy tags.
-// Negative prompts are critical for avoiding bad anatomy.
-function cleanVisualDesc(desc) {
-  if (!desc) return "";
-  return desc
-    .replace(/\b(close-up portrait|medium shot|medium full shot|full body shot|front view|viewed from behind|back view|close-up shot of crotch)\b/gi, '')
-    .replace(/\b(lying on bed|kneeling on bed|bending over|standing|sitting|kneeling|legs spread|legs open|legs spread wide open|legs spread wide)\b/gi, '')
-    .replace(/\b(showing ass|showing bare ass|showing pussy|showing detailed pussy|showing bare breasts|showing large breasts|cleavage|bare chest)\b/gi, '')
-    .replace(/\b(completely naked|nude|naked)\b/gi, '')
-    .replace(/\b(wearing|wear|clothed|clothes|clothing|outfit|saree|sari|dress|skirt|jeans|top|lingerie|bikini|nighty|gown|suit|salwar|kurti|bra|panties|pant|shirt|t-shirt|panty|kapde|kapda|undergarments|underwear|fabric|lace)\b/gi, '')
-    .replace(/,\s*,/g, ',')
-    .replace(/^,|,$/g, '')
-    .trim();
-}
-
-function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}) {
-  const skinTone = 'extremely fair white skin, flawless pale, soft fluffy white skin tone, ultra fair complexion'; // Strongly forced as per user request
-  const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*|long open blonde hair|short curly blonde hair|long wavy open brunette hair)/i);
-  const hair = hairDesc ? hairDesc[0] : 'beautiful blonde hair';
-  
-  const age = char?.age || 30;
-  const bodyTags = char?.bodyTags || (age >= 35 ? 'mature curvy figure' : 'attractive curvy figure');
-  const faceTags = char?.faceTags || 'beautiful face, seductive eyes';
-  const breastTags = char?.breastTags || 'large natural breasts';
-  const buttTags = char?.buttTags || 'curvy round backside, wide hips';
-  
-  let prompt = '';
-  let negativePrompt = 'ugly, deformed, bad anatomy, extra limbs, mutated hands, blurry, low quality, worst quality, watermark, text, signature, cartoon, anime, 3d, illustration, drawing, painting, sketch, cg render';
-
-  const eth = char?.ethnicity || "foreigner woman";
-
-  if (isClothingRequested) {
-    const cleanDesc = visualDesc || "wearing seductive outfit";
-    switch (category) {
-      case 'breasts':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking seductively at camera, bedroom setting, warm golden lighting, sharp focus, ultra detailed, professional photography, 8k`;
-        break;
-      case 'ass':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, ${eth} viewed from behind, ${age} years old, ${hair}, ${faceTags}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, soft thick thighs, ${skinTone}, bedroom, warm lighting, sharp focus, ultra detailed, 8k`;
-        break;
-      case 'pussy':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up, ${eth} lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${bodyTags}, ${skinTone}, soft warm bedroom lighting, sharp focus, ultra detailed, 8k`;
-        break;
-      case 'face':
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, wearing ${cleanDesc}, soft bedroom lighting, sharp focus, ultra detailed, 8k`;
-        break;
-      default:
-        prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, ${bodyTags}, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k`;
-    }
-    return { prompt, negativePrompt };
-  }
-  
-  // Nude/Uncensored prompts
-  
-  const cleanDesc = cleanVisualDesc(visualDesc);
-  const wardrobeDesc = user?.wardrobe || "";
-  const isWardrobeActive = wardrobeDesc.length > 0;
-  const finalDesc = wardrobeDesc ? `${cleanDesc}, ${wardrobeDesc}` : cleanDesc;
-  const extraDesc = finalDesc ? `, ${finalDesc}` : "";
-  
-  // Force clothing negative tags ONLY IF wardrobe is NOT active
-  if (!isWardrobeActive) {
-    negativePrompt += ', clothes, clothing, dressed, bra, panties, underwear, lingerie, bikini, top, skirt, saree, dress, shirt';
-  }
-  
-  // Skin tone negative tags
-  negativePrompt += ', dark skin, brown skin, tan, dusky, black skin, wheatish skin, dark complexion, tanned skin, censored, mosaic, pixelated';
-
+  // Otherwise, use dynamic chat-based visual description
+  const chatDesc = cleanVisualDesc(visualDesc);
+  const extra = chatDesc ? `, ${chatDesc}` : "";
 
   switch (category) {
     case 'pussy':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, highly detailed macro close-up photography of crotch, gorgeous ${eth} lying on bed, spreading legs wide open, directly facing crotch, showing beautiful natural female anatomy, realistic detailed pink labia minora, clitoris, natural skin texture, clean shaved smooth pubic area, completely naked, ${skinTone}, soft inner thighs, warm lighting, ultra detailed, 8k${extraDesc}`;
-      negativePrompt += ', hands near crotch, extra fingers, censored, blurred, abstract, mutated, twisted flesh, weird anatomy, extra labia, deformed, tumor';
+      p = `${qual}, macro close-up photography of crotch, ${char.identityTags} lying on bed spreading legs wide open, showing beautiful natural pink labia minora, clean shaved smooth pubic area, ${clothesStr}, ${skinTone}${extra}`;
+      n += ", hands near crotch, abstract, deformed, tumor, mutated";
       break;
-    
     case 'ass':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
-      negativePrompt += ', front view, face facing forward, front torso';
+      p = `${qual}, ${char.identityTags} viewed from behind bending over seductively, showing bare ${char.buttTags}, ${clothesStr}, ${skinTone}, bedroom${extra}`;
+      n += ", front view, face facing forward";
       break;
-    
     case 'breasts':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, completely naked, showing bare ${breastTags}, ${bodyTags}, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
-      negativePrompt += ', hands near face, legs, feet';
+      p = `${qual}, medium shot of ${char.identityTags}, ${char.faceTags}, showing bare ${char.breastTags}, ${clothesStr}, ${skinTone}, bedroom${extra}`;
+      n += ", hands near face, legs";
       break;
-    
     case 'face':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, close-up portrait of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, looking directly at camera, soft bedroom lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
-      negativePrompt += ', body, hands, fingers, nudity';
+      p = `${qual}, close-up portrait of ${char.identityTags}, ${char.faceTags}, ${clothesStr}, ${skinTone}${extra}`;
       break;
-    
+    case 'pose':
+      p = `${qual}, photo of ${char.identityTags} lying flat on her back on a bed, viewed from above, ${clothesStr}, legs slightly spread, looking seductively at camera, showing ${char.breastTags}, ${char.bodyTags}, ${skinTone}${extra}`;
+      n += ", standing, sitting, vertical";
+      break;
     default:
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, full body shot of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, completely naked, showing full nude body, ${faceTags}, ${breastTags}, ${buttTags}, ${bodyTags}, seductive pose, looking at camera, bedroom, cinematic lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
+      p = `${qual}, full body shot of ${char.identityTags}, ${char.faceTags}, ${char.bodyTags}, ${clothesStr}, seductive pose, ${skinTone}, bedroom${extra}`;
   }
-  
-  return { prompt, negativePrompt };
+  return { prompt: p, negativePrompt: n };
+}
+
+function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}, forceDescription = null) {
+  // Prodia uses the same logic but longer negative prompt for SDXL standard model
+  const base = buildRunwarePrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
+  base.negativePrompt += ", deformed, ugly, bad anatomy, bad hands, missing fingers, extra digits, extra limbs, mutation, poorly drawn";
+  return base;
 }
 
 // ─── FLUX-OPTIMIZED PROMPT BUILDER ───────────────────────────────────────────
@@ -1329,7 +1187,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Stage 1: Runware (CivitAI SDXL - Best Quality, Sub-second, requires API key)
   const hasRunwareKeys = getRunwareKeys().length > 0;
   if (hasRunwareKeys) {
-    const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc, user);
+    const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
     console.log(`🎨 Stage 1: Runware API...`);
     console.log(`🎨 Runware Prompt: ${runwarePromptData.prompt.substring(0, 150)}...`);
     imageBuffer = await generateWithRunware(runwarePromptData.prompt, runwarePromptData.negativePrompt);
@@ -1341,7 +1199,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     if (statusMsgId && hasRunwareKeys) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    const prodiaPromptData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
+    const prodiaPromptData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
     console.log(`🎨 Stage 2: Prodia SDXL...`);
     imageBuffer = await generateWithProdia(prodiaPromptData.prompt, prodiaPromptData.negativePrompt);
     if (imageBuffer) successModel = 'prodia_sdxl';
