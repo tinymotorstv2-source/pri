@@ -905,7 +905,7 @@ async function generateWithRunware(prompt, negativePrompt = '') {
         console.error(`❌ Runware failed to return image URL using key index ${index}`);
       }
     } catch (e) {
-      console.error(`❌ Runware generation error using key index ${index}:`, e.message);
+      console.error(`❌ Runware generation error using key index ${index}:`, e.error ? e.error.message : e.message);
       // Key failed, so let's reset client for this key to force re-initialization if ever retried
       if (currentActiveRunwareKey === keyToTry) {
         currentRunwareClient = null;
