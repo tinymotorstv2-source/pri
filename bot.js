@@ -890,8 +890,8 @@ async function generateWithRunware(prompt, negativePrompt = '') {
         height: 1024,
         numberResults: 1,
         outputType: ["URL"],
-        steps: 8,
-        CFGScale: 2.2
+        steps: 6,
+        CFGScale: 2.0
       });
 
       if (image && image[0] && image[0].imageURL) {
@@ -919,9 +919,19 @@ async function generateWithRunware(prompt, negativePrompt = '') {
 }
 
 function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "") {
-  // We can reuse the Prodia prompt builder since both use SD/SDXL paradigms
-  // which benefit from detailed prompts and negative prompts.
-  return buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
+  const prodiaData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc);
+  
+  // Decouple negative prompt for Runware (Juggernaut XL Lightning).
+  // Lightning checkpoints need short, minimal negative prompts to avoid quality degradation.
+  let runwareNeg = "blurry, low quality, worst quality, cartoon, anime, 3d, illustration, drawing, censored, mosaic, pixelated";
+  if (!isClothingRequested) {
+    runwareNeg += ", clothes, clothing, bra, panties, underwear, lingerie";
+  }
+  
+  return {
+    prompt: prodiaData.prompt,
+    negativePrompt: runwareNeg
+  };
 }
 
 // ─── PRODIA API ENGINE (SDXL — Best Quality NSFW) ────────────────────────────
@@ -1082,7 +1092,7 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
       break;
     
     case 'breasts':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked, showing bare voluptuous breasts, perfect nipples, sexy stomach and navel, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, completely naked, showing bare ${breastTags}, ${bodyTags}, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
       negativePrompt += ', hands near face, legs, feet';
       break;
     
@@ -1146,7 +1156,7 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
       return `photo of gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'breasts':
-      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked, showing bare voluptuous breasts, perfect nipples, sexy stomach and navel, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, completely naked, showing bare ${breastTags}, ${bodyTags}, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'face':
       return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, looking directly at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality${extraDesc}`;
@@ -1258,7 +1268,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
     } else if (category === 'breasts') {
-      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, completely naked, showing bare voluptuous breasts, perfect nipples, sexy stomach and navel, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
+      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, completely naked, showing bare ${char.breastTags}, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
     } else if (category === 'ass') {
       prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing bare ${char.buttTags}, voluptuous wide hips, completely naked, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
