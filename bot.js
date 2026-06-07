@@ -1084,8 +1084,8 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
 
   switch (category) {
     case 'pussy':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${eth} lying on bed, legs spread wide open, showing highly detailed natural realistic vulva, perfect pink pussy, beautiful pink labia, realistic skin folds, ${skinTone}, completely naked, very thick thighs, clean shaved smooth pubic area, warm bedroom lighting, ultra detailed, 8k${extraDesc}`;
-      negativePrompt += ', hands near crotch, extra fingers, censored, blurred';
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, highly detailed macro close-up photography of crotch, gorgeous ${eth} lying on bed, spreading legs wide open, directly facing crotch, showing beautiful natural female anatomy, realistic detailed pink labia minora, clitoris, natural skin texture, clean shaved smooth pubic area, completely naked, ${skinTone}, soft inner thighs, warm lighting, ultra detailed, 8k${extraDesc}`;
+      negativePrompt += ', hands near crotch, extra fingers, censored, blurred, abstract, mutated, twisted flesh, weird anatomy, extra labia, deformed, tumor';
       break;
     
     case 'ass':
@@ -1745,7 +1745,7 @@ bot.on('callback_query', async (callbackQuery) => {
         forceDesc = `full body shot from head to toe, standing completely naked, showing full nude body, ${char.faceTags}, showing bare ${char.breastTags}, ${char.bodyTags}, looking at camera, ${basePrompt}`;
       } else if (category === 'pose') {
         actionTxt = `Ruko jaan, main bed pe let kar ek garam pose bana rahi hoon... 🛌🔥`;
-        forceDesc = `full body shot, lying on bed, completely naked, legs slightly apart, looking seductively at camera, showing bare breasts, ${char.faceTags}, ${char.bodyTags}, ${basePrompt}`;
+        forceDesc = `photo of girl lying flat on her back on the bed, lying down, viewed from above, completely naked, legs slightly spread, looking seductively at camera, showing bare breasts, ${char.faceTags}, ${char.bodyTags}, ${basePrompt}`;
       }
     } else {
       // Fallback if no last visual description exists
@@ -1766,7 +1766,7 @@ bot.on('callback_query', async (callbackQuery) => {
         forceDesc = `full body shot from head to toe, standing completely naked, showing full nude body, ${char.faceTags}, showing bare ${char.breastTags}, ${char.bodyTags}, looking at camera, bedroom`;
       } else if (category === 'pose') {
         actionTxt = `Ruko jaan, main bed pe let kar ek garam pose bana rahi hoon... 🛌🔥`;
-        forceDesc = `full body shot, lying on bed, completely naked, legs slightly apart, looking seductively at camera, showing bare breasts, ${char.faceTags}, ${char.bodyTags}, bedroom`;
+        forceDesc = `photo of girl lying flat on her back on the bed, lying down, viewed from above, completely naked, legs slightly spread, looking seductively at camera, showing bare breasts, ${char.faceTags}, ${char.bodyTags}, bedroom`;
       }
     }
 
