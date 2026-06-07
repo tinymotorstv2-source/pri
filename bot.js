@@ -890,8 +890,8 @@ async function generateWithRunware(prompt, negativePrompt = '') {
         height: 1024,
         numberResults: 1,
         outputType: ["URL"],
-        steps: 6,
-        CFGScale: 2.0
+        steps: 8,
+        CFGScale: 2.2
       });
 
       if (image && image[0] && image[0].imageURL) {
@@ -1073,16 +1073,16 @@ function buildProdiaPrompt(category, char, isClothingRequested = false, visualDe
   switch (category) {
     case 'pussy':
       prompt = `masterpiece, best quality, photorealistic, RAW photo, intimate close-up photograph, gorgeous ${eth} lying on bed, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, smooth shaved skin, natural skin folds and texture, ${skinTone}, soft inner thighs, ${bodyTags}, clean shaved smooth pubic area, warm bedroom lighting, soft focus background, sharp focus on subject, ultra detailed, professional intimate photography, 8k${extraDesc}`;
-      negativePrompt += ', face, head, upper body, hands near crotch, extra fingers';
+      negativePrompt += ', hands near crotch, extra fingers, censored, blurred';
       break;
     
     case 'ass':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, ${eth} viewed from behind, ${age} years old, bending over seductively, ${faceTags}, showing bare ${buttTags}, ${skinTone}, completely naked, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, detailed skin texture, bedroom, warm golden lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
       negativePrompt += ', front view, face facing forward, front torso';
       break;
     
     case 'breasts':
-      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
+      prompt = `masterpiece, best quality, photorealistic, RAW photo, gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked, showing bare voluptuous breasts, perfect nipples, sexy stomach and navel, looking seductively at camera, bedroom, warm lighting, sharp focus, ultra detailed, 8k${extraDesc}`;
       negativePrompt += ', hands near face, legs, feet';
       break;
     
@@ -1143,10 +1143,10 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
       return `intimate close-up photo of bare skin between legs, ${eth}, legs spread wide open, showing highly detailed natural vulva, pink labia minora, clitoris, detailed skin texture and natural folds, completely naked, ${skinTone}, clean shaved smooth pubic area, soft natural thighs, ${bodyTags}, lying on bed, soft warm bedroom lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'ass':
-      return `photo of ${eth} viewed from behind, bending over seductively, ${faceTags}, showing bare ${buttTags}, ${skinTone}, completely naked, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `photo of gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'breasts':
-      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked upper body, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, showing bare ${breastTags}, ${bodyTags}, completely naked, showing bare voluptuous breasts, perfect nipples, sexy stomach and navel, looking seductively at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'face':
       return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, looking directly at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality${extraDesc}`;
@@ -1258,14 +1258,14 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
     } else if (category === 'breasts') {
-      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, showing ${char.breastTags}, bare chest, completely naked, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
+      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, completely naked, showing bare voluptuous breasts, perfect nipples, sexy stomach and navel, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
     } else if (category === 'ass') {
-      prompt = `${visualDesc}, medium full shot viewed from behind, ${identityTags}, head turned looking back over shoulder seductively at camera, ${char.faceTags}, showing bare round backside, ${char.buttTags}, bending slightly forward, completely naked, ${char.thighTags}, soft warm lighting, ${qualityTags}`;
+      prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing bare ${char.buttTags}, voluptuous wide hips, completely naked, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
     } else if (category === 'pussy') {
       prompt = `${visualDesc}, intimate close-up photo, lying on bed, legs spread wide open, ${identityTags}, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth pubic area, showing highly detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, soft warm bedroom lighting, ${qualityTags}`;
-      negPrompt = `${activeNegative}, face, head, upper body, clothes, clothing, bra, panties, underwear, bikini`;
+      negPrompt = `${activeNegative}, hands near crotch, extra fingers, censored, blurred`;
     } else {
       prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, showing ${char.breastTags}, completely naked, full body nudity, looking at camera, ${qualityTags}`;
       negPrompt = activeNegative;
@@ -1357,6 +1357,10 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
         [
           { text: "Strip Clothes 👙 (Breasts)", callback_data: `photo_breasts_${characterId}` },
           { text: "Zoom In Face 🔍", callback_data: `photo_face_${characterId}` }
+        ],
+        [
+          { text: "Full Nude Body 💃", callback_data: `photo_full_${characterId}` },
+          { text: "Lying Down Pose 🛌", callback_data: `photo_pose_${characterId}` }
         ]
       ]
     }
@@ -1690,6 +1694,12 @@ bot.on('callback_query', async (callbackQuery) => {
       } else if (category === 'face') {
         actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
         forceDesc = `close-up portrait, ${char.faceTags}, looking directly at camera, ${basePrompt}`;
+      } else if (category === 'full') {
+        actionTxt = `Ruko jaan, main aapke liye apni poori nangi body dikha rahi hoon... 💃🔥`;
+        forceDesc = `full body shot from head to toe, standing completely naked, showing full nude body, ${char.faceTags}, showing bare ${char.breastTags}, ${char.bodyTags}, looking at camera, ${basePrompt}`;
+      } else if (category === 'pose') {
+        actionTxt = `Ruko jaan, main bed pe let kar ek garam pose bana rahi hoon... 🛌🔥`;
+        forceDesc = `full body shot, lying on bed, completely naked, legs slightly apart, looking seductively at camera, showing bare breasts, ${char.faceTags}, ${char.bodyTags}, ${basePrompt}`;
       }
     } else {
       // Fallback if no last visual description exists
@@ -1705,6 +1715,12 @@ bot.on('callback_query', async (callbackQuery) => {
       } else if (category === 'face') {
         actionTxt = `Ruko jaan, close-up face shot le rahi hai ${char.name}... 🔍💋`;
         forceDesc = `close-up portrait, ${char.faceTags}, looking directly at camera, bedroom`;
+      } else if (category === 'full') {
+        actionTxt = `Ruko jaan, main aapke liye apni poori nangi body dikha rahi hoon... 💃🔥`;
+        forceDesc = `full body shot from head to toe, standing completely naked, showing full nude body, ${char.faceTags}, showing bare ${char.breastTags}, ${char.bodyTags}, looking at camera, bedroom`;
+      } else if (category === 'pose') {
+        actionTxt = `Ruko jaan, main bed pe let kar ek garam pose bana rahi hoon... 🛌🔥`;
+        forceDesc = `full body shot, lying on bed, completely naked, legs slightly apart, looking seductively at camera, showing bare breasts, ${char.faceTags}, ${char.bodyTags}, bedroom`;
       }
     }
 
