@@ -1514,6 +1514,7 @@ bot.onText(/\/start/, async (msg) => {
   mem[uid] = { 
     history: [], 
     name: msg.from.first_name || existingUser.name || '', 
+    username: msg.from.username || existingUser.username || '',
     count: 0,
     points: existingUser.points !== undefined ? existingUser.points : 0,
     character: existingUser.character || 'priya',
@@ -1869,6 +1870,7 @@ bot.onText(/\/admin/, async (msg) => {
       inline_keyboard: [
         [{ text: "🔑 Generate VIP Key", callback_data: "admin_genkey" }],
         [{ text: "📜 List All VIP Keys", callback_data: "admin_listkeys" }],
+        [{ text: "👥 View All Users", callback_data: "admin_listusers" }],
         [{ text: "➕ Add Runware API Key", callback_data: "admin_addapi" }],
         [{ text: "📋 List Runware API Keys", callback_data: "admin_listapi" }],
         [{ text: "🎤 Upload Sexy Voice Note", callback_data: "admin_uploadvoice" }],
@@ -2055,6 +2057,24 @@ bot.on('callback_query', async (callbackQuery) => {
       let res = "🔑 *Active Runware API Keys:*\n\n";
       apis.forEach((key, i) => { res += `${i + 1}. \`${key}\`\n`; });
       await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
+    } else if (data === 'admin_listusers') {
+      const mem = loadMemory();
+      let usersList = "👥 *Bot Users:*\n\n";
+      let count = 0;
+      for (const [uid, udata] of Object.entries(mem)) {
+        if (!uid.startsWith('_') && udata && typeof udata === 'object' && 'points' in udata) {
+          count++;
+          const uname = udata.username ? `@${udata.username}` : (udata.name || 'NoName');
+          usersList += `${count}. ${uname} (ID: \`${uid}\`)\n`;
+        }
+      }
+      usersList = `**Total Users: ${count}**\n\n` + usersList;
+      
+      // Split if too long
+      if (usersList.length > 4000) {
+        usersList = usersList.substring(0, 4000) + "\n...and more.";
+      }
+      await bot.sendMessage(chatId, usersList, { parse_mode: 'Markdown' });
     } else if (data === 'admin_uploadvoice') {
       await bot.sendMessage(chatId, "🎤 **Voice Upload Mode**\n\nAbhi isi chat mein directly koi bhi `.mp3`, `.ogg`, ya apna record kiya hua Voice Note send/forward kar do. \n\nBot usko automatically pakad lega aur `voices` list mein add kar dega!", { parse_mode: 'Markdown' });
     } else if (data === 'admin_chat') {
@@ -2364,6 +2384,7 @@ bot.on('message', async (msg) => {
   user.lastActiveTime = Date.now();
   user.chatId = chatId;
   user.proactiveCount = 0;
+  user.username = msg.from.username || user.username || '';
   saveMemory(mem);
 
   // If user is currently replying to Truth or Dare
