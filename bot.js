@@ -1023,6 +1023,13 @@ async function generateWithRunware(prompt, negativePrompt = '') {
     }
   }
 
+  if (keys.length > 0) {
+    try {
+      bot.sendMessage(ADMIN_ID, `🚨 *RUNWARE API ALERT* 🚨\n\nAll ${keys.length} Runware API keys have failed!\nThey might be out of balance or invalid. The bot is automatically falling back to Free APIs (Pollinations/FLUX).\n\nPlease check your Runware Dashboard for balance.`, { parse_mode: 'Markdown' });
+    } catch (err) {
+      console.error("Could not send admin alert", err);
+    }
+  }
   console.error('❌ All Runware API keys failed.');
   return null;
 }
