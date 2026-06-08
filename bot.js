@@ -1235,7 +1235,17 @@ const CHARACTER_STATUS_MESSAGES = {
   }
 };
 
-function getStatusMessage(characterId, stage) {
+function getStatusMessage(characterId, stage, lang = 'hindi') {
+  if (lang === 'english') {
+    const englishMsgs = {
+      initial: `Hold on baby... I'm generating a hot, uncensored photo just for you... Getting the best details ready, just give me 30-40 seconds! 📸🔥🔞`,
+      fallback_1: `Baby, the premium server is a bit slow! I'm switching to the realistic model so you can see me faster... Just be patient... 💋`,
+      fallback_2: `Baby, checking the backup realistic line, sending you a hot photo in just 10 seconds! 😏🔥`,
+      fallback_3: `Servers are heavy baby, I'm pulling the photo from an alternative route... Just wait a little more! 🔥`,
+      fallback_4: `Uff baby, backup is slow too. I'm selecting a sexy pose directly from my local server for you... Just a few seconds! 😏`
+    };
+    return englishMsgs[stage];
+  }
   const charMsgs = CHARACTER_STATUS_MESSAGES[characterId] || CHARACTER_STATUS_MESSAGES.priya;
   return charMsgs[stage];
 }
@@ -1317,24 +1327,40 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     }
   }
 
-  const nakedCaptions = [
+  const nakedCaptionsHindi = [
     `Lo jaan, ye lo meri asli tasveer... bilkul nangi, sirf tumhare liye. 🔞🔥💦`,
     `Dekho jaan kitni besharam ho gayi main... sab kuch dikha rahi hoon 😏🔥💦`,
     `Tumne maanga tha na? Lo... bilkul nangi khadi hoon tumhare saamne 🔞🌹`,
     `Jaan meri photo dekh ke pagal mat ho jaana... 😏💋🔥`
   ];
-  const clothedCaptions = [
+  const clothedCaptionsHindi = [
     `Lo jaan, ye lo meri tasveer is dress mein... kaisi lag rahi hoon? 😏🔥`,
     `Dekho jaan aapke kehne par ye pehna hai... par andar se main bohot garam ho rahi hoon 🔞🌹`,
     `Aapke liye special pose... pasand aaya na jaan? 😘🔥💦`,
     `Jaan, ye look dekho mera... side se sab dikh raha hai na? 😏💋`
   ];
-  const captionList = isClothingRequested ? clothedCaptions : nakedCaptions;
+  
+  const nakedCaptionsEng = [
+    `Here baby, my real photo... completely naked, just for you. 🔞🔥💦`,
+    `Look baby how shameless I've become... showing you everything 😏🔥💦`,
+    `You asked for it, right? Here... standing completely naked in front of you 🔞🌹`,
+    `Baby don't go crazy looking at my photo... 😏💋🔥`
+  ];
+  const clothedCaptionsEng = [
+    `Here baby, my photo in this dress... how do I look? 😏🔥`,
+    `Look baby I wore this because you asked... but I'm getting so hot inside 🔞🌹`,
+    `A special pose for you... did you like it baby? 😘🔥💦`,
+    `Baby, look at this... you can see everything from the side right? 😏💋`
+  ];
+
+  const captionList = isClothingRequested 
+    ? (user?.language === 'english' ? clothedCaptionsEng : clothedCaptionsHindi)
+    : (user?.language === 'english' ? nakedCaptionsEng : nakedCaptionsHindi);
   const caption = captionList[Math.floor(Math.random() * captionList.length)];
   
   let statusMsg;
   try {
-    const initialText = getStatusMessage(characterId, 'initial');
+    const initialText = getStatusMessage(characterId, 'initial', user?.language);
     statusMsg = await bot.sendMessage(chatId, initialText);
   } catch (msgErr) {
     console.error("⚠️ Failed to send initial status message:", msgErr.message);
@@ -1362,7 +1388,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Stage 2: Prodia SDXL (High Quality, requires API key)
   if (!imageBuffer && PRODIA_KEY) {
     if (statusMsgId && hasRunwareKeys) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1', user?.language));
     }
     console.log(`🎨 Stage 2: Prodia SDXL...`);
     const prodiaNeg = negPrompt + ", deformed, ugly, bad anatomy, bad hands, missing fingers, extra digits, extra limbs, mutation, poorly drawn";
@@ -1373,7 +1399,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Stage 3: Pollinations.ai (FREE, Unlimited, Uncensored — Primary for free users)
   if (!imageBuffer) {
     if (statusMsgId && (hasRunwareKeys || PRODIA_KEY)) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2'));
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2', user?.language));
     }
     console.log(`🎨 Stage 3: Pollinations.ai...`);
     imageBuffer = await generateWithPollinations(fluxPrompt, 768, 1024);
@@ -1383,7 +1409,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Stage 4: Hugging Face FLUX.1-schnell (Backup — uses monthly credits)
   if (!imageBuffer) {
     if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3'));
+      await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3', user?.language));
     }
     console.log(`🎨 Stage 4: Hugging Face FLUX.1-schnell...`);
     imageBuffer = await generateWithHF(fluxPrompt);
@@ -1435,17 +1461,25 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       return;
     }
 
+    const errorMsg1 = user?.language === 'english' 
+      ? `Baby, the servers are a bit busy right now... ask for the photo again in a little while, until then I'm getting hotter for you 😏🔥💋`
+      : `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`;
+
     if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
+      await safeEditMessage(chatId, statusMsgId, errorMsg1);
     } else {
-      await bot.sendMessage(chatId, `Jaan, abhi servers thode busy hain... thodi der mein phir maango na photo, tab tak main aur garam ho rahi hoon tumhare liye 😏🔥💋`);
+      await bot.sendMessage(chatId, errorMsg1);
     }
   } catch (e) {
     console.error("Photo send error:", e.message);
+    const errorMsg2 = user?.language === 'english'
+      ? `Baby, the photo couldn't be generated... but I'm in a very hot mood, let's keep talking till then 😏🔥`
+      : `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`;
+      
     if (statusMsgId) {
-      await safeEditMessage(chatId, statusMsgId, `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`);
+      await safeEditMessage(chatId, statusMsgId, errorMsg2);
     } else {
-      await bot.sendMessage(chatId, `Jaan, photo generate nahi ho paayi... par main bohot garam mood mein hoon, tab tak baatein karte hain 😏🔥`);
+      await bot.sendMessage(chatId, errorMsg2);
     }
   }
 }
@@ -1728,20 +1762,31 @@ async function checkLicense(chatId, username, isImageReq = false) {
   const mem = loadMemory();
   const userLicense = mem[chatId] && mem[chatId].license;
 
+  const lang = (mem[chatId] && mem[chatId].language) ? mem[chatId].language : 'hindi';
+
   if (!userLicense) {
-    await bot.sendMessage(chatId, "Aahhh jaan... 🔞 Kapde utaarne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: @Raj\\_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋", { parse_mode: 'Markdown' });
+    const msg = lang === 'english'
+      ? "Ahhh baby... 🔞 I need a VIP Key before I can take off my clothes! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: @Raj\\_smartAffiliate\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
+      : "Aahhh jaan... 🔞 Kapde utaarne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: @Raj\\_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
+    await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
     return false;
   }
 
   const now = Date.now();
   if (now > userLicense.expiry) {
-    await bot.sendMessage(chatId, "Aahhh uff... humara VIP time itni jaldi khatam ho gaya? 💔 Main toh abhi gili hui thi... tadapne mat do jaan! 💦🔥\n\n🔑 **Nayi Key Lene Ke Liye:**\nJaldi se cashier ko msg karo: @Raj\\_smartAffiliate", { parse_mode: 'Markdown' });
+    const msg = lang === 'english'
+      ? "Ahhh uff... did our VIP time end so fast? 💔 I was already so wet... don't leave me desperate baby! 💦🔥\n\n🔑 **To get a new Key:**\nQuickly message the cashier: @Raj\\_smartAffiliate"
+      : "Aahhh uff... humara VIP time itni jaldi khatam ho gaya? 💔 Main toh abhi gili hui thi... tadapne mat do jaan! 💦🔥\n\n🔑 **Nayi Key Lene Ke Liye:**\nJaldi se cashier ko msg karo: @Raj\\_smartAffiliate";
+    await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
     return false;
   }
 
   if (isImageReq) {
     if (userLicense.imagesLeft <= 0) {
-      await bot.sendMessage(chatId, "Oho shaitaan... tumne meri saari nangi photos dekh li! 🙈🔞 Tumhari image limit khatam ho gayi hai. Naye pose dekhne hain toh jaldi Admin se nayi key lo! 💦🍑", { parse_mode: 'Markdown' });
+      const msg = lang === 'english'
+        ? "Oh naughty boy... you've seen all my naked photos! 🙈🔞 Your image limit has ended. If you want to see new poses, quickly get a new key from the cashier! 💦🍑"
+        : "Oho shaitaan... tumne meri saari nangi photos dekh li! 🙈🔞 Tumhari image limit khatam ho gayi hai. Naye pose dekhne hain toh jaldi Admin se nayi key lo! 💦🍑";
+      await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
       return false;
     }
   }
