@@ -2,6 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const googleTTS = require('google-tts-api');
 require('dotenv').config();
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
