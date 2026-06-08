@@ -1134,7 +1134,9 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
       case 'ass':
         return `photo of ${eth} viewed from behind, ${faceTags}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, ${skinTone}, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
       case 'pussy':
-        return `intimate close-up photo, ${eth} lying on bed, legs spread wide open, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, ${bodyTags}, ${skinTone}, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
+        const posesC = ["lying on bed with legs spread wide open", "sitting on the edge of the bed with legs wide apart", "standing with legs spread apart", "squatting on the floor with knees wide apart", "kneeling with legs spread wide"];
+        const rndC = posesC[Math.floor(Math.random() * posesC.length)];
+        return `full body photo of ${eth}, ${rndC}, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, showing full body, ${bodyTags}, ${skinTone}, ${faceTags}, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
       case 'face':
         return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, wearing ${cleanDesc}, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
       default:
@@ -1147,7 +1149,9 @@ function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc
 
   switch (category) {
     case 'pussy':
-      return `intimate close-up photo of bare skin between legs, ${eth}, legs spread wide open, showing highly detailed natural realistic vulva, perfect pink pussy, beautiful pink labia, completely naked, ${skinTone}, clean shaved smooth pubic area, thick thighs, ${bodyTags}, lying on bed, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
+      const posesN = ["lying on bed with legs spread wide open", "sitting on the edge of the bed with legs wide apart", "standing with legs spread apart", "squatting on the floor with knees wide apart", "kneeling with legs spread wide"];
+      const rndN = posesN[Math.floor(Math.random() * posesN.length)];
+      return `full body photo of ${eth}, completely naked, ${rndN}, showing full body, showing highly detailed natural realistic vulva, perfect pink pussy, beautiful pink labia, ${skinTone}, clean shaved smooth pubic area, thick thighs, ${bodyTags}, ${faceTags}, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
     
     case 'ass':
       return `photo of gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
@@ -1326,10 +1330,9 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   // Stage 1: Runware (CivitAI SDXL - Best Quality, Sub-second, requires API key)
   const hasRunwareKeys = getRunwareKeys().length > 0;
   if (hasRunwareKeys) {
-    const runwarePromptData = buildRunwarePrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
     console.log(`🎨 Stage 1: Runware API...`);
-    console.log(`🎨 Runware Prompt: ${runwarePromptData.prompt.substring(0, 150)}...`);
-    imageBuffer = await generateWithRunware(runwarePromptData.prompt, runwarePromptData.negativePrompt);
+    console.log(`🎨 Runware Prompt: ${prompt.substring(0, 150)}...`);
+    imageBuffer = await generateWithRunware(prompt, negPrompt);
     if (imageBuffer) successModel = 'runware';
   }
 
@@ -1338,9 +1341,9 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     if (statusMsgId && hasRunwareKeys) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1'));
     }
-    const prodiaPromptData = buildProdiaPrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
     console.log(`🎨 Stage 2: Prodia SDXL...`);
-    imageBuffer = await generateWithProdia(prodiaPromptData.prompt, prodiaPromptData.negativePrompt);
+    const prodiaNeg = negPrompt + ", deformed, ugly, bad anatomy, bad hands, missing fingers, extra digits, extra limbs, mutation, poorly drawn";
+    imageBuffer = await generateWithProdia(prompt, prodiaNeg);
     if (imageBuffer) successModel = 'prodia_sdxl';
   }
 
