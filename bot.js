@@ -2325,13 +2325,15 @@ bot.on('message', async (msg) => {
       try {
         await bot.sendMessage(chatId, reply);
         
-        const moanFiles = ['ahhh.mp3', 'ahhhh.mp3', 'girl-moan.mp3', 'moan.mp3', 'loud-moan.mp3'];
-        const randomMoan = moanFiles[Math.floor(Math.random() * moanFiles.length)];
-        const moanPath = require('path').join(__dirname, 'voices', randomMoan);
-        
-        if (require('fs').existsSync(moanPath)) {
-          await new Promise(r => setTimeout(r, 1000));
-          await bot.sendVoice(chatId, require('fs').createReadStream(moanPath));
+        const voicesDir = require('path').join(__dirname, 'voices');
+        if (require('fs').existsSync(voicesDir)) {
+          const files = require('fs').readdirSync(voicesDir).filter(f => f.endsWith('.mp3') || f.endsWith('.ogg') || f.endsWith('.oga'));
+          if (files.length > 0) {
+            const randomMoan = files[Math.floor(Math.random() * files.length)];
+            const moanPath = require('path').join(voicesDir, randomMoan);
+            await new Promise(r => setTimeout(r, 1000));
+            await bot.sendVoice(chatId, require('fs').createReadStream(moanPath));
+          }
         }
         
         if (user.count > 10 && Math.random() > 0.85) {
@@ -2362,6 +2364,31 @@ bot.on('message', async (msg) => {
     ];
     const fallbackMsg = sweetFallbacks[Math.floor(Math.random() * sweetFallbacks.length)];
     await bot.sendMessage(chatId, fallbackMsg);
+  }
+});
+
+// Admin upload voice handlers
+bot.on('voice', async (msg) => {
+  if (msg.chat.id.toString() !== ADMIN_ID) return;
+  try {
+    const voicesDir = path.join(__dirname, 'voices');
+    if (!fs.existsSync(voicesDir)) fs.mkdirSync(voicesDir);
+    await bot.downloadFile(msg.voice.file_id, voicesDir);
+    await bot.sendMessage(msg.chat.id, "✅ Sexy Voice note saved! Bot ab isko adult baaton ke time randomly use karegi. 🔥🎧");
+  } catch (e) {
+    await bot.sendMessage(msg.chat.id, "❌ Error saving voice: " + e.message);
+  }
+});
+
+bot.on('audio', async (msg) => {
+  if (msg.chat.id.toString() !== ADMIN_ID) return;
+  try {
+    const voicesDir = path.join(__dirname, 'voices');
+    if (!fs.existsSync(voicesDir)) fs.mkdirSync(voicesDir);
+    await bot.downloadFile(msg.audio.file_id, voicesDir);
+    await bot.sendMessage(msg.chat.id, "✅ Sexy Audio MP3 saved! Bot ab isko adult baaton ke time randomly use karegi. 🔥🎧");
+  } catch (e) {
+    await bot.sendMessage(msg.chat.id, "❌ Error saving audio: " + e.message);
   }
 });
 
