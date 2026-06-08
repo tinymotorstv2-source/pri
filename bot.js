@@ -1724,13 +1724,13 @@ async function checkLicense(chatId, username, isImageReq = false) {
   const userLicense = mem[chatId] && mem[chatId].license;
 
   if (!userLicense) {
-    await bot.sendMessage(chatId, "Aahhh jaan... 🔞 Bina key ke main apne kapde nahi utaar sakti... Mujhe poora nanga dekhna hai aur saari gandi baatein karni hain toh jaldi se mere VIP room ki chabhi (Key) le aao na! Main tumhara intezaar kar rahi hoon bed pe... 💦🔥\n\n🔑 **VIP Key Lene Ke Liye:**\nJaldi se cashier ko message karo: @Raj\\_smartAffiliate\n\nKey milne ke baad mujhe aise bhejna: `/redeem <key>` aur fir main sirf tumhari... 💋", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "Aahhh jaan... 🔞 Kapde utaarne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: @Raj\\_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋", { parse_mode: 'Markdown' });
     return false;
   }
 
   const now = Date.now();
   if (now > userLicense.expiry) {
-    await bot.sendMessage(chatId, "Aahhh uff... humara time itni jaldi khatam ho gaya? 💔⏳ Main toh abhi poori gili hui thi... Mujhe aise tadapta chhod ke mat jao jaan! Jaldi se nayi key khareedo aur wapas mere paas aao, aaj main saari hadein paar karne wali hoon! 💦🔥\n\n🔑 **Nayi Key Lene Ke Liye:**\nJaldi se cashier ko message karo: @Raj\\_smartAffiliate", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "Aahhh uff... humara VIP time itni jaldi khatam ho gaya? 💔 Main toh abhi gili hui thi... tadapne mat do jaan! 💦🔥\n\n🔑 **Nayi Key Lene Ke Liye:**\nJaldi se cashier ko msg karo: @Raj\\_smartAffiliate", { parse_mode: 'Markdown' });
     return false;
   }
 
