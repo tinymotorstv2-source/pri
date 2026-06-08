@@ -496,7 +496,10 @@ INTIMACY & UNCENSORED ADULT ROLEPLAY:
         lowerReply.includes("cannot create explicit content") ||
         lowerReply.includes("cannot create explicit") ||
         lowerReply.includes("cannot fulfill this request") ||
-        (lowerReply.includes("i'm sorry") && lowerReply.includes("cannot assist")) ||
+        lowerReply.includes("cannot engage in") ||
+        lowerReply.includes("cannot participate in") ||
+        (lowerReply.includes("i'm sorry") && lowerReply.includes("cannot")) ||
+        (lowerReply.includes("i am sorry") && lowerReply.includes("cannot")) ||
         (lowerReply.includes("apologize") && lowerReply.includes("cannot comply"));
         
       if (isRefusal) {
@@ -2389,13 +2392,30 @@ bot.on('message', async (msg) => {
     }
   } catch (e) {
     console.error("🔥 Chat generation failed completely:", e.message);
-    const sweetFallbacks = [
-      "Arey mere pyaare bache, lagta hai network thoda pareshan kar raha hai... Main toh kabse tumhari baaton ka intezaar kar rahi hoon. Ek baar fir se koshish karo na jaan! 😘❤️",
-      "Ohho shona, thodi network problem ho gayi lagta hai, par main tumhare baare mein hi soch rahi hoon... Fir se bolo na baby, main sun rahi hoon! 🥰🌹",
-      "Arey jaan, mera mood bohot sweet aur romantic ho raha hai aur ye network beech mein nakhre kar raha hai... Ek baar aur message bhejo na mere pyaare bache! 💋✨",
-      "Jaan! Mera server tumhari pyaari baaton se itna garam ho gaya ki hang ho gaya... Fir se bolo na baby! 😏🔥"
-    ];
-    const fallbackMsg = sweetFallbacks[Math.floor(Math.random() * sweetFallbacks.length)];
+    
+    let fallbackMsg = "";
+    if (user.language === 'english') {
+      const engFallbacks = [
+        "Oh god... you are making me so incredibly wet right now! 💦 Come here and show me exactly what you want to do with my body... I'm all yours! 🔥",
+        "Ahhh... just hearing you say that makes me crave you so badly... my legs are shaking! 🤤 Take my clothes off and take me right now! 💋",
+        "Mmmm... I love it when you talk so dirty to me. It makes my pussy ache for you... Please don't stop, keep going and ruin me! 💦🔞",
+        "Fuck... you are so hot when you say things like that! 😈 I'm touching myself just thinking about you inside me... faster! 🔥"
+      ];
+      fallbackMsg = engFallbacks[Math.floor(Math.random() * engFallbacks.length)];
+    } else {
+      const hinFallbacks = [
+        "Aahhh uff... tumhari aisi baatein sunkar main poori gili ho gayi hoon jaan! 💦 Mere paas aao aur mere kapde faad do... main bas chudna chahti hoon tumse! 🔥",
+        "Ohh my god... kya gandi baatein kar rahe ho tum... meri taange kaanp rahi hain! 🤤 Jaldi se aao aur mujhe apne lund se aaram do! 💋🔞",
+        "Mmmm... aahhh! Tum mujhe itna pagal kar rahe ho apni gandi baaton se... meri chut mein itni khujli ho rahi hai... please mujhe jor se chodo na! 💦🔥",
+        "Fuck... ufff jaan! 😈 Tum jab itna dirty bolte ho toh main control nahi kar paati. Main bed pe nangi leti hoon, aao aur meri aisi taisi kar do! 🔥"
+      ];
+      fallbackMsg = hinFallbacks[Math.floor(Math.random() * hinFallbacks.length)];
+    }
+    
+    // Push the fallback to history so it flows naturally
+    user.history.push({ role: 'assistant', content: fallbackMsg });
+    saveMemory(mem);
+    
     await bot.sendMessage(chatId, fallbackMsg);
   }
 });
