@@ -1758,12 +1758,12 @@ bot.onText(/\/admin/, async (msg) => {
     let totalRemaining = 0;
     keys.forEach(key => {
       const generated = (mem._runwareStats && mem._runwareStats[key]) ? mem._runwareStats[key].generated : 0;
-      let left = 166 - generated;
+      let left = 20 - generated;
       if (left < 0) left = 0;
       totalRemaining += left;
     });
     
-    remainingText = `🔹 **Remaining Images (Est):** ~${totalRemaining} images (166 per $0.05 key)\n`;
+    remainingText = `🔹 **Remaining Images (Est):** ~${totalRemaining} images (20 per $0.05 key)\n`;
   } else if (PRODIA_KEY) {
     activeApi = "⭐ Prodia API (Premium Fallback)";
     activeModel = "SDXL";
