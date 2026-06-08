@@ -1704,6 +1704,25 @@ async function checkLicense(chatId, username, isImageReq = false) {
   return true;
 }
 
+bot.onText(/\/admin/, async (msg) => {
+  const chatId = msg.chat.id;
+  if (chatId.toString() !== ADMIN_ID) return;
+  
+  const options = {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🔑 Generate VIP Key", callback_data: "admin_genkey" }],
+        [{ text: "📜 List All VIP Keys", callback_data: "admin_listkeys" }],
+        [{ text: "➕ Add Runware API Key", callback_data: "admin_addapi" }],
+        [{ text: "📋 List Runware API Keys", callback_data: "admin_listapi" }],
+        [{ text: "💬 Return to Chat Mode", callback_data: "admin_chat" }]
+      ]
+    },
+    parse_mode: 'Markdown'
+  };
+  await bot.sendMessage(chatId, "🛠️ *Admin Control Dashboard*\n\nWelcome back Admin! Select an option below to manage the bot:", options);
+});
+
 bot.onText(/\/genkey (\d+) (\d+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   if (chatId.toString() !== ADMIN_ID) return;
@@ -1822,6 +1841,44 @@ bot.on('callback_query', async (callbackQuery) => {
     await bot.answerCallbackQuery(callbackQuery.id);
   } catch (e) {
     console.error("Callback answer error:", e.message);
+  }
+
+  // --- ADMIN CALLBACKS ---
+  if (data.startsWith('admin_')) {
+    if (chatId.toString() !== ADMIN_ID) return; // double check
+    const mem = loadMemory();
+
+    if (data === 'admin_genkey') {
+      await bot.sendMessage(chatId, "🔑 Enter minutes and images (e.g. 30 10):", {
+        reply_markup: { force_reply: true, selective: true }
+      });
+    } else if (data === 'admin_listkeys') {
+      // Logic from listkeys
+      const keys = mem._keys || {};
+      let res = "🔑 *All Generated Keys:*\n\n";
+      for (const [k, details] of Object.entries(keys)) {
+        res += `\`${k}\` - ${details.status} (${details.minutes}m/${details.images}img) - By: ${details.usedBy || 'None'}\n`;
+      }
+      if (Object.keys(keys).length === 0) res = "No keys generated yet.";
+      await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
+    } else if (data === 'admin_addapi') {
+      await bot.sendMessage(chatId, "🔑 Enter the new Runware API Key:", {
+        reply_markup: { force_reply: true, selective: true }
+      });
+    } else if (data === 'admin_listapi') {
+      // Logic from listapi
+      const apis = mem.runwareApis || [];
+      if (apis.length === 0) {
+        await bot.sendMessage(chatId, "⚠️ No active Runware API keys found.");
+        return;
+      }
+      let res = "🔑 *Active Runware API Keys:*\n\n";
+      apis.forEach((key, i) => { res += `${i + 1}. \`${key}\`\n`; });
+      await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
+    } else if (data === 'admin_chat') {
+      await bot.sendMessage(chatId, "💬 You are now in Chat Mode. Send any message to talk to the AI!");
+    }
+    return;
   }
 
     // 1. Photo control buttons
@@ -2072,6 +2129,43 @@ bot.on('message', async (msg) => {
   const text = msg.text;
   
   if (!text) return;
+
+  // Intercept Admin ForceReply messages
+  if (msg.reply_to_message && chatId.toString() === ADMIN_ID) {
+    const q = msg.reply_to_message.text;
+    if (q === "🔑 Enter minutes and images (e.g. 30 10):") {
+      const parts = text.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        const minutes = parseInt(parts[0]);
+        const images = parseInt(parts[1]);
+        if (isNaN(minutes) || isNaN(images)) {
+          await bot.sendMessage(chatId, "❌ Invalid format. Use numbers like `30 10`.", { parse_mode: 'Markdown' });
+          return;
+        }
+        const key = "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const mem = loadMemory();
+        if (!mem._keys) mem._keys = {};
+        mem._keys[key] = { minutes: minutes, images: images, usedBy: null, status: 'UNUSED' };
+        saveMemory(mem);
+        await bot.sendMessage(chatId, `✅ *New Key Generated*\n\n🔑 Key: \`${key}\`\n⏳ Duration: ${minutes} minutes\n🖼 Images: ${images}\n\nUser can redeem using: \`/redeem ${key}\``, { parse_mode: 'Markdown' });
+      } else {
+        await bot.sendMessage(chatId, "❌ Invalid format. You must provide exactly two numbers.");
+      }
+      return; // Skip normal chat handling
+    } else if (q === "🔑 Enter the new Runware API Key:") {
+      const key = text.trim();
+      const mem = loadMemory();
+      if (!mem.runwareApis) mem.runwareApis = [];
+      if (!mem.runwareApis.includes(key)) {
+        mem.runwareApis.push(key);
+        saveMemory(mem);
+        await bot.sendMessage(chatId, `✅ Added new Runware API key:\n\`${key}\``, { parse_mode: 'Markdown' });
+      } else {
+        await bot.sendMessage(chatId, "⚠️ This Runware API key is already saved.");
+      }
+      return; // Skip normal chat handling
+    }
+  }
   
   // Ignore command calls in the general message handler since they are handled by bot.onText
   if (text.startsWith('/')) return;
