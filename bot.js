@@ -1697,7 +1697,7 @@ async function checkLicense(chatId, username, isImageReq = false) {
 bot.onText(/\/genkey (\d+) (\d+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   if (chatId.toString() !== ADMIN_ID) return;
-  const days = parseInt(match[1]);
+  const minutes = parseInt(match[1]);
   const images = parseInt(match[2]);
   
   const key = "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1705,14 +1705,14 @@ bot.onText(/\/genkey (\d+) (\d+)/, async (msg, match) => {
   if (!mem._keys) mem._keys = {};
   
   mem._keys[key] = {
-    days: days,
+    minutes: minutes,
     images: images,
     usedBy: null,
     status: 'UNUSED'
   };
   saveMemory(mem);
   
-  await bot.sendMessage(chatId, `✅ *New Key Generated*\n\n🔑 Key: \`${key}\`\n⏳ Duration: ${days} days\n🖼 Images: ${images}\n\nUser can redeem using: \`/redeem ${key}\``, { parse_mode: 'Markdown' });
+  await bot.sendMessage(chatId, `✅ *New Key Generated*\n\n🔑 Key: \`${key}\`\n⏳ Duration: ${minutes} minutes\n🖼 Images: ${images}\n\nUser can redeem using: \`/redeem ${key}\``, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/listkeys/, async (msg) => {
@@ -1723,7 +1723,7 @@ bot.onText(/\/listkeys/, async (msg) => {
   const keys = mem._keys || {};
   let res = "🔑 *All Generated Keys:*\n\n";
   for (const [k, details] of Object.entries(keys)) {
-    res += `\`${k}\` - ${details.status} (${details.days}d/${details.images}img) - By: ${details.usedBy || 'None'}\n`;
+    res += `\`${k}\` - ${details.status} (${details.minutes}m/${details.images}img) - By: ${details.usedBy || 'None'}\n`;
   }
   if (Object.keys(keys).length === 0) res = "No keys generated yet.";
   
@@ -1766,7 +1766,7 @@ bot.onText(/\/redeem (.+)/, async (msg, match) => {
   
   if (!mem[chatId]) getUser(mem, chatId); // initialize user
   
-  const expiryDate = Date.now() + (mem._keys[key].days * 24 * 60 * 60 * 1000);
+  const expiryDate = Date.now() + (mem._keys[key].minutes * 60 * 1000);
   mem[chatId].license = {
     expiry: expiryDate,
     imagesLeft: mem._keys[key].images
