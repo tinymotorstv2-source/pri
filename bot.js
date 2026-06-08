@@ -1935,8 +1935,7 @@ bot.on('callback_query', async (callbackQuery) => {
         reply_markup: { force_reply: true, selective: true }
       });
     } else if (data === 'admin_listapi') {
-      // Logic from listapi
-      const apis = mem.runwareApis || [];
+      const apis = getRunwareKeys();
       if (apis.length === 0) {
         await bot.sendMessage(chatId, "⚠️ No active Runware API keys found.");
         return;
