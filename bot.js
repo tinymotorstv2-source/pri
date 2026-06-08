@@ -1674,19 +1674,19 @@ async function checkLicense(chatId, username, isImageReq = false) {
   const userLicense = mem[chatId] && mem[chatId].license;
 
   if (!userLicense) {
-    await bot.sendMessage(chatId, "Uff jaan... 🔞\n\nTum aise hi mere paas nahi aa sakte... mujhe tumhari chahiye, par uske liye tumhe andar aane ka pass (License Key) lena padega. 💋\n\nJaldi se Admin ko message karo aur key lo, fir `/redeem <key>` type karke mere saare kapde utaar do... main nangi hoke wait kar rahi hoon! 💦", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "Uff jaan... 🔞 Tum aise hi mere paas nahi aa sakte... pehle Admin se License Key leke `/redeem <key>` karo, fir main saare kapde utaar dungi! 💦", { parse_mode: 'Markdown' });
     return false;
   }
 
   const now = Date.now();
   if (now > userLicense.expiry) {
-    await bot.sendMessage(chatId, "Aah jaan... humara time khatam ho gaya! 💔⏳\n\nMain toh abhi aur garam ho rahi thi... aur tumhari key expire ho gayi? Mujhe beech mein aise tadapta mat chhodo na... 🥺\n\nJaldi se Admin se nayi key lo aur wapas aao... mera jism tumhare bina bechain hai! 🔥💦", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "Aah jaan... humara time khatam ho gaya! 💔⏳ Mujhe aur tadapta mat chhodo, jaldi Admin se nayi key lo aur wapas aao... jism bechain hai! 🔥💦", { parse_mode: 'Markdown' });
     return false;
   }
 
   if (isImageReq) {
     if (userLicense.imagesLeft <= 0) {
-      await bot.sendMessage(chatId, "Oho mere shaitaan... tumne toh meri saari nangi photos dekh li! 🙈🔞\n\nTumhari image limit khatam ho chuki hai jaan... aur main abhi aur bhi gande pose dikhana chahti thi... 💋\n\nJaldi se Admin ko contact karke naye photo credits lo na, please... uske baad main tumhe apne sabse private hisse dikhaungi! 💦🍑", { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, "Oho shaitaan... tumne meri saari nangi photos dekh li! 🙈🔞 Tumhari image limit khatam ho gayi hai. Naye pose dekhne hain toh jaldi Admin se nayi key lo! 💦🍑", { parse_mode: 'Markdown' });
       return false;
     }
   }
