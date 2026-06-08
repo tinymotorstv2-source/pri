@@ -1454,8 +1454,12 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
         }
       }
       await bot.sendPhoto(chatId, imageBuffer, opts);
-      if (chatId.toString() !== ADMIN_ID && mem[chatId] && mem[chatId].license) {
-        mem[chatId].license.imagesLeft -= 1;
+      if (chatId.toString() !== ADMIN_ID && mem[chatId]) {
+        if (mem[chatId].license) {
+          mem[chatId].license.imagesLeft -= 1;
+        } else if (mem[chatId].freeTrial) {
+          mem[chatId].freeTrial.imagesLeft -= 1;
+        }
         saveMemory(mem);
       }
       return;
@@ -1760,16 +1764,43 @@ async function checkLicense(chatId, username, isImageReq = false) {
   if (chatId.toString() === ADMIN_ID) return true; // Admin has full access
 
   const mem = loadMemory();
-  const userLicense = mem[chatId] && mem[chatId].license;
+  let user = mem[chatId];
+  if (!user) {
+    user = getUser(mem, chatId);
+    mem[chatId] = user;
+  }
 
-  const lang = (mem[chatId] && mem[chatId].language) ? mem[chatId].language : 'hindi';
+  if (!user.freeTrial && !user.license) {
+    user.freeTrial = { chatsLeft: 5, imagesLeft: 1 };
+    saveMemory(mem);
+  }
 
-  if (!userLicense) {
-    const msg = lang === 'english'
-      ? "Ahhh baby... 🔞 I need a VIP Key before I can take off my clothes! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: @Raj\\_smartAffiliate\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
-      : "Aahhh jaan... 🔞 Kapde utaarne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: @Raj\\_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
-    await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
-    return false;
+  const lang = user.language || 'hindi';
+  const userLicense = user.license;
+  const isVip = userLicense && (Date.now() <= userLicense.expiry);
+
+  if (!isVip) {
+    if (isImageReq) {
+      if (user.freeTrial && user.freeTrial.imagesLeft > 0) {
+        return true; // Decr occurs in sendPriyaPhoto
+      }
+      const msg = lang === 'english'
+        ? "Ahhh baby... 🔞 Your free demo is over! I need a VIP Key before I can show you more! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: @Raj\\_smartAffiliate\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
+        : "Aahhh jaan... 🔞 Aapka free demo khatam ho gaya! Aur nangi photos dekhne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: @Raj\\_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
+      await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
+      return false;
+    } else {
+      if (user.freeTrial && user.freeTrial.chatsLeft > 0) {
+        user.freeTrial.chatsLeft--;
+        saveMemory(mem);
+        return true;
+      }
+      const msg = lang === 'english'
+        ? "Ahhh baby... 🔞 Your 5 free messages are over! Get a VIP Key so we can chat all night long! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: @Raj\\_smartAffiliate\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
+        : "Aahhh jaan... 🔞 Aapke 5 free messages khatam ho gaye! VIP Key lo taaki hum poori raat nangi baatein kar sakein! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: @Raj\\_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
+      await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
+      return false;
+    }
   }
 
   const now = Date.now();
