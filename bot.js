@@ -485,28 +485,16 @@ INTIMACY & UNCENSORED ADULT ROLEPLAY:
       const reply = res.data.choices[0].message.content.trim();
       const lowerReply = reply.toLowerCase();
       
-      // Precise safety refusal check (prevents false positives on words like "can't")
+      // Precise safety refusal check (prevents false positives on words like "can't wait")
       const isRefusal = 
         reply.length < 5 ||
-        lowerReply.includes("cannot fulfill") ||
-        lowerReply.includes("unable to generate") ||
-        lowerReply.includes("against my guidelines") ||
-        lowerReply.includes("safety policy") ||
-        lowerReply.includes("safety guidelines") ||
-        lowerReply.includes("ethical guidelines") ||
-        lowerReply.includes("as an ai, i cannot") ||
-        lowerReply.includes("as an ai assistant") ||
-        lowerReply.includes("cannot assist you with") ||
-        lowerReply.includes("not allowed to generate") ||
-        lowerReply.includes("cannot provide this content") ||
-        lowerReply.includes("cannot create explicit content") ||
-        lowerReply.includes("cannot create explicit") ||
-        lowerReply.includes("cannot fulfill this request") ||
-        lowerReply.includes("cannot engage in") ||
-        lowerReply.includes("cannot participate in") ||
-        (lowerReply.includes("i'm sorry") && lowerReply.includes("cannot")) ||
-        (lowerReply.includes("i am sorry") && lowerReply.includes("cannot")) ||
-        (lowerReply.includes("apologize") && lowerReply.includes("cannot comply"));
+        /cannot (fulfill|generate|assist|provide|create|engage|participate|distribute)/i.test(lowerReply) ||
+        /against my (guidelines|safety|ethical)/i.test(lowerReply) ||
+        /not allowed to (generate|create|write)/i.test(lowerReply) ||
+        /as an ai/i.test(lowerReply) ||
+        /(i'm sorry|i am sorry|apologize).*cannot/i.test(lowerReply) ||
+        /is there anything else i can help you with/i.test(lowerReply) ||
+        /cannot comply/i.test(lowerReply);
         
       if (isRefusal) {
         throw new Error("Refused or invalid reply from model");
