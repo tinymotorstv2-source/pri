@@ -1724,13 +1724,13 @@ async function checkLicense(chatId, username, isImageReq = false) {
   const userLicense = mem[chatId] && mem[chatId].license;
 
   if (!userLicense) {
-    await bot.sendMessage(chatId, "Uff jaan... 🔞 Tum aise hi mere paas nahi aa sakte... pehle mujhse chat karne ke liye License Key khareedo! 💦\n\n🔑 **Key Buy Karne Ke Liye:**\nCashier ko message karo: @Raj\\_smartAffiliate \n*(Payment ke liye Fampay ka QR mango aur pay karke key lelo)*\n\nJab key mil jaye toh usko aise bhejna: `/redeem <key>` 🔥", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "Uff jaan... 🔞 Tum aise hi mere paas nahi aa sakte... pehle mujhse chat karne ke liye License Key khareedo! 💦\n\n🔑 **Key Buy Karne Ke Liye:**\nCashier ko message karo: @Raj\\_smartAffiliate\n\nJab key mil jaye toh usko aise bhejna: `/redeem <key>` 🔥", { parse_mode: 'Markdown' });
     return false;
   }
 
   const now = Date.now();
   if (now > userLicense.expiry) {
-    await bot.sendMessage(chatId, "Aah jaan... humara VIP time khatam ho gaya! 💔⏳ Mujhe aur tadapta mat chhodo, jaldi se nayi key lo aur wapas aao... jism bechain hai! 🔥💦\n\n🔑 **Nayi Key Buy Karne Ke Liye:**\nCashier ko message karo: @Raj\\_smartAffiliate \n*(Fampay par payment karke new key receive karein)*", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "Aah jaan... humara VIP time khatam ho gaya! 💔⏳ Mujhe aur tadapta mat chhodo, jaldi se nayi key lo aur wapas aao... jism bechain hai! 🔥💦\n\n🔑 **Nayi Key Buy Karne Ke Liye:**\nCashier ko message karo: @Raj\\_smartAffiliate", { parse_mode: 'Markdown' });
     return false;
   }
 
