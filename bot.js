@@ -1236,12 +1236,12 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
     ? `low quality, worst quality, blurry, out of focus, distorted, deformed, deformed anatomy, bad anatomy, bad proportions, unnatural body, unnatural anatomy, missing limbs, missing arms, missing legs, extra limbs, extra arms, extra legs, bad hands, mutated hands, poorly drawn hands, missing fingers, extra fingers, fused fingers, too many fingers, floating limbs, disconnected limbs, disfigured face, mutated face, poorly drawn face, asymmetric eyes, crossed eyes, lazy eye, bad eyes, twisted body, long neck, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`
     : baseNSFWNegative;
 
-  const qualityTags = "8k resolution, ultra-detailed, photorealistic, cinematic lighting, sharp focus, masterpiece, best quality, RAW photo, professional photography, physically perfect anatomy, symmetrical facial features, highly detailed face, flawless skin texture, dynamic lighting";
+  const qualityTags = "8k resolution, ultra-detailed, photorealistic, cinematic lighting, sharp focus, masterpiece, best quality, RAW photo, professional photography, physically perfect anatomy, identical consistent character facial features, symmetrical face, flawless skin texture, dynamic lighting";
 
   if (forceDescription) {
     prompt = `${forceDescription}, ${identityTags}, ${category !== 'pussy' ? char.faceTags + ', ' : ''}${qualityTags}`;
     if (category === 'pussy') {
-      negPrompt = `${activeNegative}, face, head, upper body, clothes, clothing, bra, panties, underwear, bikini`;
+      negPrompt = `${activeNegative}, close-up, cropped torso, cropped face, out of frame, clothes, clothing, bra, panties, underwear, bikini`;
     } else if (category === 'ass') {
       negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
     } else if (category === 'breasts') {
@@ -1260,8 +1260,16 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing ${isClothingRequested ? 'tight fit' : `bare ${char.buttTags}, completely naked`}, voluptuous wide hips, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, front view, face facing forward, front torso`;
     } else if (category === 'pussy') {
-      prompt = `${visualDesc}, intimate close-up photo, lying on bed, legs spread wide open, ${identityTags}, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth pubic area, showing highly detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, soft warm bedroom lighting, ${qualityTags}`;
-      negPrompt = `${activeNegative}, hands near crotch, extra fingers, censored, blurred`;
+      const pussyPoses = [
+        "lying on bed with legs spread wide open",
+        "sitting on the edge of the bed with legs wide apart",
+        "standing with legs spread apart, bending back slightly",
+        "squatting on the floor with knees wide apart",
+        "kneeling with legs spread wide"
+      ];
+      const randomPose = pussyPoses[Math.floor(Math.random() * pussyPoses.length)];
+      prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, looking at camera, completely naked, ${randomPose}, showing full body, showing highly detailed natural vulva, pink labia minora, clitoris, ${char.breastTags}, ${char.bodyTags}, ${char.thighTags}, bare skin between thighs, detailed natural skin texture, dynamic seductive pose, soft bedroom lighting, ${qualityTags}`;
+      negPrompt = `${activeNegative}, close-up, cropped torso, cropped face, out of frame, hands near crotch, censored, blurred`;
     } else {
       prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, ${isClothingRequested ? '' : `showing ${char.breastTags}, completely naked, full body nudity, `}looking at camera, ${qualityTags}`;
       negPrompt = activeNegative;
