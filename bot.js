@@ -2318,12 +2318,11 @@ bot.on('message', async (msg) => {
     user.history.push({ role: 'assistant', content: reply });
     saveMemory(mem);
     
-    // Voice Note Logic (Randomly 1 in 4 messages, or specific triggers)
-    const shouldSendVoice = Math.random() < 0.25 || text.toLowerCase().includes('awaz') || text.toLowerCase().includes('voice');
-    
-    const isSexy = text.toLowerCase().match(/(moan|ahhh|awaz|nangi|nude|sex|badan|breast|pussy|psy|gaand|dudh|chut|boobs|ass|chuchi|fuddi|pichwada|chod|kiss|suck|deep|ah|ugh)/) || reply.toLowerCase().match(/(moan|ahhh|aahh|ugh|ah|oh god|yes|harder|chudai|chod|kiss|suck|deep|ah)/);
+    // Voice Note Logic
+    const explicitRegex = /(moan|ahhh|aahh|ugh|ah |oh god|yes|harder|chudai|chod|kiss|suck|deep|nangi|nude|sex|sx|badan|breast|pussy|psy|gaand|dudh|chut|boobs|bobs|ass|chuchi|fuddi|pichwada|lund|lnd|land|fuck)/i;
+    const isSexy = reply.match(explicitRegex);
 
-    if (isSexy && Math.random() < 0.6) {
+    if (isSexy) {
       await bot.sendChatAction(chatId, 'record_voice');
       try {
         await bot.sendMessage(chatId, reply);
