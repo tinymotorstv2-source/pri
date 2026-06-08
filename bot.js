@@ -1005,6 +1005,15 @@ async function generateWithRunware(prompt, negativePrompt = '') {
 
       if (image && image[0] && image[0].imageURL) {
         console.log(`🎉 Runware generated successfully using key index ${index} in ${Date.now() - startTime}ms! Downloading...`);
+        
+        try {
+          const mem = loadMemory();
+          if (!mem._runwareStats) mem._runwareStats = {};
+          if (!mem._runwareStats[keyToTry]) mem._runwareStats[keyToTry] = { generated: 0 };
+          mem._runwareStats[keyToTry].generated += 1;
+          saveMemory(mem);
+        } catch(e) { console.error("Error saving Runware stats:", e); }
+
         const res = await axios.get(image[0].imageURL, { responseType: 'arraybuffer', timeout: 15000 });
         
         // Save this key as the active key for future runs so we start here
@@ -1735,13 +1744,26 @@ bot.onText(/\/admin/, async (msg) => {
   const chatId = msg.chat.id;
   if (chatId.toString() !== ADMIN_ID) return;
   
-  const runwareCount = getRunwareKeys().length;
+  const mem = loadMemory();
+  const keys = getRunwareKeys();
+  const runwareCount = keys.length;
   let activeApi = "🟢 Pollinations.ai (Free/Unlimited)";
   let activeModel = "FLUX.1-schnell";
   
+  let remainingText = "";
   if (runwareCount > 0) {
     activeApi = "⚡ Runware API (Premium)";
     activeModel = "CivitAI SDXL (civitai:133005@782002)";
+    
+    let totalRemaining = 0;
+    keys.forEach(key => {
+      const generated = (mem._runwareStats && mem._runwareStats[key]) ? mem._runwareStats[key].generated : 0;
+      let left = 166 - generated;
+      if (left < 0) left = 0;
+      totalRemaining += left;
+    });
+    
+    remainingText = `🔹 **Remaining Images (Est):** ~${totalRemaining} images (166 per $0.05 key)\n`;
   } else if (PRODIA_KEY) {
     activeApi = "⭐ Prodia API (Premium Fallback)";
     activeModel = "SDXL";
@@ -1751,7 +1773,8 @@ bot.onText(/\/admin/, async (msg) => {
                     `📊 **Current Image Backend:**\n` +
                     `🔹 **API:** ${activeApi}\n` +
                     `🔹 **Model:** ${activeModel}\n` +
-                    `🔹 **Runware Keys Loaded:** ${runwareCount}\n\n` +
+                    `🔹 **Runware Keys Loaded:** ${runwareCount}\n` +
+                    remainingText + `\n` +
                     `Welcome back Admin! Select an option below to manage the bot:`;
   
   const options = {
