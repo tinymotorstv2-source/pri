@@ -1226,15 +1226,17 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
   let negPrompt = "";
 
   const identityTags = char.identityTags;
-  const antiCartoonNegative = "cartoon, anime, 3d, illustration, drawing, painting, digital art, sketch, cg, 3d render, artwork, canvas, bad photo, cell shaded, anime style, manga, semi-realistic, 3d digital render";
-  const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, extra legs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, long neck, cropped hands, malformed hands, malformed limbs, floating limbs, disconnected limbs, out of frame, bad eyes, crossed eyes, asymmetric eyes, lazy eye, multiple heads, cloned face, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`;
+  const antiCartoonNegative = "cartoon, anime, 3d, illustration, drawing, painting, digital art, sketch, cg, 3d render, artwork, canvas, bad photo, cell shaded, anime style, manga, semi-realistic, 3d digital render, watermark, text, signature";
+  
+  const baseNSFWNegative = `clothes, clothing, bra, panties, underwear, bikini, dress, shirt, fabric, low quality, worst quality, blurry, out of focus, distorted, deformed, deformed anatomy, bad anatomy, bad proportions, unnatural body, unnatural anatomy, missing limbs, missing arms, missing legs, extra limbs, extra arms, extra legs, bad hands, mutated hands, poorly drawn hands, missing fingers, extra fingers, fused fingers, too many fingers, floating limbs, disconnected limbs, disfigured face, mutated face, poorly drawn face, asymmetric eyes, crossed eyes, lazy eye, bad eyes, twisted body, long neck, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`;
 
   const isClothingRequested = (forceDescription && !user?.wardrobe) ? false : (hasClothingRequest(history, visualDesc) || !!(user?.wardrobe));
+  
   const activeNegative = isClothingRequested
-    ? `watermark, text, signature, low quality, bad anatomy, blur, censored, blurred, deformed, ugly, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, extra limbs, bad proportions, disfigured, mutated, poorly drawn face, poorly drawn hands, mutation, twisted body, bad eyes, crossed eyes, asymmetric eyes, malformed hands, malformed limbs, floating limbs, ugly feet, malformed feet, extra toes, ${antiCartoonNegative}`
+    ? `low quality, worst quality, blurry, out of focus, distorted, deformed, deformed anatomy, bad anatomy, bad proportions, unnatural body, unnatural anatomy, missing limbs, missing arms, missing legs, extra limbs, extra arms, extra legs, bad hands, mutated hands, poorly drawn hands, missing fingers, extra fingers, fused fingers, too many fingers, floating limbs, disconnected limbs, disfigured face, mutated face, poorly drawn face, asymmetric eyes, crossed eyes, lazy eye, bad eyes, twisted body, long neck, gross proportions, ugly feet, malformed feet, extra toes, fused toes, ${antiCartoonNegative}`
     : baseNSFWNegative;
 
-  const qualityTags = "photorealistic, highly detailed, perfect anatomy, perfect hands, perfect eyes, realistic eyes, cinematic lighting, sharp focus, 4k, masterpiece, best quality, RAW photo, professional photography";
+  const qualityTags = "8k resolution, ultra-detailed, photorealistic, cinematic lighting, sharp focus, masterpiece, best quality, RAW photo, professional photography, physically perfect anatomy, symmetrical facial features, highly detailed face, flawless skin texture, dynamic lighting";
 
   if (forceDescription) {
     prompt = `${forceDescription}, ${identityTags}, ${category !== 'pussy' ? char.faceTags + ', ' : ''}${qualityTags}`;
@@ -1252,16 +1254,16 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
     } else if (category === 'breasts') {
-      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, completely naked, showing bare ${char.breastTags}, no bra, no clothes, ${char.bodyTags}, ${qualityTags}`;
-      negPrompt = `${activeNegative}, face, head, eyes, hands near face, legs, feet, clothes, clothing, bra, underwear, panties`;
+      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, ${isClothingRequested ? '' : `completely naked, showing bare ${char.breastTags}, no bra, no clothes, `}${char.bodyTags}, ${qualityTags}`;
+      negPrompt = `${activeNegative}, face, head, eyes, hands near face, legs, feet`;
     } else if (category === 'ass') {
-      prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing bare ${char.buttTags}, voluptuous wide hips, completely naked, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
-      negPrompt = `${activeNegative}, front view, face facing forward, front torso, clothes, clothing, bra, panties, underwear, bikini`;
+      prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing ${isClothingRequested ? 'tight fit' : `bare ${char.buttTags}, completely naked`}, voluptuous wide hips, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
+      negPrompt = `${activeNegative}, front view, face facing forward, front torso`;
     } else if (category === 'pussy') {
       prompt = `${visualDesc}, intimate close-up photo, lying on bed, legs spread wide open, ${identityTags}, bare skin between thighs, detailed natural skin texture and folds, completely naked, clean shaved smooth pubic area, showing highly detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, soft warm bedroom lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands near crotch, extra fingers, censored, blurred`;
     } else {
-      prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, showing ${char.breastTags}, completely naked, full body nudity, looking at camera, ${qualityTags}`;
+      prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, ${isClothingRequested ? '' : `showing ${char.breastTags}, completely naked, full body nudity, `}looking at camera, ${qualityTags}`;
       negPrompt = activeNegative;
     }
   }
