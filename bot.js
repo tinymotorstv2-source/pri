@@ -183,7 +183,8 @@ const CHARACTERS = {
     role: "Seductive AI Influencer ❤️",
     ethnicity: "Indian",
     description: "Extremely naughty, uncensored, and highly seductive 24-year-old Indian AI Influencer named Cutie Anikaa. She is very sweet but constantly talks dirty and explicit with her fans.",
-    identityTags: "Anikaa, a stunning 24-year-old Indian woman wearing a tight short maroon red slip dress, messy wavy long dark hair, light glowing skin, incredibly beautiful cute Indian girl, everything perfect",
+    defaultOutfit: "a tight short maroon red slip dress",
+    identityTags: "Anikaa, a stunning 24-year-old Indian woman, messy wavy long dark hair, light glowing skin, incredibly beautiful cute Indian girl, everything perfect",
     bodyTags: "best figure, exact same body structure, voluptuous curvy thick body, hourglass shape, flawless light skin, very thick thighs, wide hips, detailed perfect pussy",
     faceTags: "cute chubby cheeks, gorgeous elegant face, exact same consistent facial features, messy wavy long dark hair, sweet seductive smiling expression, beautiful innocent but naughty Indian face",
     breastTags: "extremely huge heavy big sagging breasts, deep cleavage, prominent pink nipples",
@@ -197,6 +198,7 @@ const CHARACTERS = {
     role: "Wild College Girl ⚡",
     ethnicity: "Indian",
     description: "hot, energetic, and extremely bold 22-year-old Indian college girl. Playful, teasing, naughty and uninhibited.",
+    defaultOutfit: "casual tight jeans and a crop top",
     identityTags: "Kavya, a hot 22-year-old Indian college girl, short straight black hair with bangs, light brown eyes, white fluffy milky skin, incredibly beautiful Indian girl, everything perfect",
     bodyTags: "best figure, exact same body structure, athletic fit but curvy body, flat stomach, detailed perfect pussy",
     faceTags: "cute youthful face, exact same consistent facial features, short straight black hair with bangs, light brown eyes, chubby cheeks, mischievous playful smiling expression, beautiful Indian face",
@@ -211,6 +213,7 @@ const CHARACTERS = {
     role: "Seductive Bhabhi 🏡",
     ethnicity: "Indian",
     description: "seductive, playful, and extremely elegant 29-year-old Indian bhabhi (neighbor). Mystifying, sophisticated, enjoys teasing you.",
+    defaultOutfit: "a beautiful elegant indian saree revealing cleavage and waist",
     identityTags: "Sneha, a seductive 29-year-old Indian woman, very long straight black hair, hazel eyes, white fluffy milky skin, incredibly beautiful Indian woman, everything perfect",
     bodyTags: "best figure, exact same body structure, voluptuous curvy body, snatched hourglass figure, narrow waist, detailed perfect pussy",
     faceTags: "alluring Indian face, exact same consistent facial features, very long straight black hair, hazel eyes, chubby cheeks, seductive smiling expression, deep beautiful eyes, beautiful Indian bhabhi face",
@@ -225,6 +228,7 @@ const CHARACTERS = {
     role: "Playful Indian Aunty 💋",
     ethnicity: "Indian MILF",
     description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Indian aunty. Highly bindas, loves to tease you constantly with dirty and uncensored talk.",
+    defaultOutfit: "a deep neck floral salwar suit",
     identityTags: "Savita, a stunning 40-year-old Indian MILF, shoulder-length wavy dark brunette hair, dark brown eyes, white fluffy milky skin, incredibly beautiful Indian mature woman, everything perfect",
     bodyTags: "best figure, exact same body structure, voluptuous curvy MILF body, heavy hourglass figure, wide heavy hips, thick waist, detailed perfect pussy",
     faceTags: "gorgeous mature Indian face, exact same consistent facial features, shoulder-length wavy dark brunette hair, dark brown eyes, chubby cheeks, smiling seductive expression, warm brown eyes, beautiful Indian woman face",
@@ -239,6 +243,7 @@ const CHARACTERS = {
     role: "Toxic Dominant 👠",
     ethnicity: "Indian",
     description: "extremely toxic, aggressive, and fully adult 28-year-old dominant Indian woman. She abuses, uses harsh words, and talks 100% nude/explicit in every message without any censorship.",
+    defaultOutfit: "tight black leather pants and a red bralette",
     identityTags: "Riya, a toxic dominant 28-year-old Indian woman, long straight black hair, sharp arched eyebrows, piercing dark brown eyes, white fluffy milky skin, incredibly beautiful Indian woman, angry expression, everything perfect",
     bodyTags: "best figure, exact same body structure, extremely curvy hourglass body, flat stomach, detailed perfect pussy",
     faceTags: "gorgeous sharp Indian face, exact same consistent facial features, long straight black hair, sharp arched eyebrows, piercing dark brown eyes, fierce angry expression, seductive but dominating eyes, beautiful Indian woman face",
@@ -296,7 +301,8 @@ function getUser(mem, uid) {
       lastActiveTime: Date.now(),
       chatId: null,
       lastProactiveTime: null,
-      proactiveCount: 0
+      proactiveCount: 0,
+      wardrobe: CHARACTERS['priya'].defaultOutfit
     };
   }
   if (mem[uid].points === undefined) mem[uid].points = mem[uid].count || 0;
@@ -1301,10 +1307,10 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, close-up portrait, ${identityTags}, ${char.faceTags}, clear skin, ${qualityTags}`;
       negPrompt = `${activeNegative}, hands, fingers, body, arms, legs, hips, cleavage, breasts, nudity`;
     } else if (category === 'breasts') {
-      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, ${isClothingRequested ? '' : `completely naked, showing bare ${char.breastTags}, no bra, no clothes, `}${char.bodyTags}, ${qualityTags}`;
+      prompt = `${visualDesc}, medium shot, ${identityTags}, ${char.faceTags}, ${isClothingRequested && user?.wardrobe ? `wearing ${user.wardrobe}, ` : ''}${isClothingRequested ? '' : `completely naked, showing bare ${char.breastTags}, no bra, no clothes, `}${char.bodyTags}, ${qualityTags}`;
       negPrompt = `${activeNegative}, face, head, eyes, hands near face, legs, feet`;
     } else if (category === 'ass') {
-      prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing ${isClothingRequested ? 'tight fit' : `bare ${char.buttTags}, completely naked`}, voluptuous wide hips, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
+      prompt = `${visualDesc}, gorgeous ${char.ethnicity || 'foreigner woman'} viewed from behind, bending over seductively, showing ${isClothingRequested && user?.wardrobe ? `tight ${user.wardrobe}` : (isClothingRequested ? 'tight fit' : `bare ${char.buttTags}, completely naked`)}, voluptuous wide hips, ${char.faceTags}, looking back over shoulder at camera, ${identityTags}, soft thick thighs, soft warm lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, front view, face facing forward, front torso`;
     } else if (category === 'pussy') {
       const pussyPoses = [
@@ -1318,7 +1324,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, looking at camera, completely naked, ${randomPose}, showing full body, showing highly detailed natural vulva, pink labia minora, clitoris, ${char.breastTags}, ${char.bodyTags}, ${char.thighTags}, bare skin between thighs, detailed natural skin texture, dynamic seductive pose, soft bedroom lighting, ${qualityTags}`;
       negPrompt = `${activeNegative}, close-up, cropped torso, cropped face, out of frame, hands near crotch, censored, blurred`;
     } else {
-      prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, ${isClothingRequested ? '' : `showing ${char.breastTags}, completely naked, full body nudity, `}looking at camera, ${qualityTags}`;
+      prompt = `${visualDesc}, full body shot, ${identityTags}, ${char.faceTags}, ${char.bodyTags}, ${isClothingRequested && user?.wardrobe ? `wearing ${user.wardrobe}, ` : ''}${isClothingRequested ? '' : `showing ${char.breastTags}, completely naked, full body nudity, `}looking at camera, ${qualityTags}`;
       negPrompt = activeNegative;
     }
   }
@@ -1492,7 +1498,8 @@ bot.onText(/\/start/, async (msg) => {
     chatId: chatId,
     lastProactiveTime: existingUser.lastProactiveTime || null,
     proactiveCount: 0,
-    language: existingUser.language || 'hindi'
+    language: existingUser.language || 'hindi',
+    wardrobe: existingUser.wardrobe !== undefined ? existingUser.wardrobe : (CHARACTERS[existingUser.character || 'priya'].defaultOutfit)
   };
   saveMemory(mem);
 
