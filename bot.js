@@ -1728,6 +1728,25 @@ bot.onText(/\/admin/, async (msg) => {
   const chatId = msg.chat.id;
   if (chatId.toString() !== ADMIN_ID) return;
   
+  const runwareCount = getRunwareKeys().length;
+  let activeApi = "🟢 Pollinations.ai (Free/Unlimited)";
+  let activeModel = "FLUX.1-schnell";
+  
+  if (runwareCount > 0) {
+    activeApi = "⚡ Runware API (Premium)";
+    activeModel = "CivitAI SDXL (civitai:133005@782002)";
+  } else if (PRODIA_KEY) {
+    activeApi = "⭐ Prodia API (Premium Fallback)";
+    activeModel = "SDXL";
+  }
+  
+  const statusMsg = `🛠️ *Admin Control Dashboard*\n\n` +
+                    `📊 **Current Image Backend:**\n` +
+                    `🔹 **API:** ${activeApi}\n` +
+                    `🔹 **Model:** ${activeModel}\n` +
+                    `🔹 **Runware Keys Loaded:** ${runwareCount}\n\n` +
+                    `Welcome back Admin! Select an option below to manage the bot:`;
+  
   const options = {
     reply_markup: {
       inline_keyboard: [
@@ -1740,7 +1759,7 @@ bot.onText(/\/admin/, async (msg) => {
     },
     parse_mode: 'Markdown'
   };
-  await bot.sendMessage(chatId, "🛠️ *Admin Control Dashboard*\n\nWelcome back Admin! Select an option below to manage the bot:", options);
+  await bot.sendMessage(chatId, statusMsg, options);
 });
 
 bot.onText(/\/genkey (\d+) (\d+)/, async (msg, match) => {
