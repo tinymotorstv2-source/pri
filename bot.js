@@ -1786,8 +1786,8 @@ async function checkLicense(chatId, username, isImageReq = false) {
         return true; // Decr occurs in sendPriyaPhoto
       }
       const msg = lang === 'english'
-        ? "Ahhh baby... 🔞 Your free demo is over! I need a VIP Key before I can show you more! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: https://t.me/Raj_smartAffiliate\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
-        : "Aahhh jaan... 🔞 Aapka free demo khatam ho gaya! Aur nangi photos dekhne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: https://t.me/Raj_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
+        ? "Ahhh baby... 🔞 Your free demo is over! I need a VIP Key before I can show you more! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: [Manager](https://t.me/Raj_smartAffiliate)\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
+        : "Aahhh jaan... 🔞 Aapka free demo khatam ho gaya! Aur nangi photos dekhne ke liye mujhe VIP Key chahiye! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: [Manager](https://t.me/Raj_smartAffiliate)\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
       await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
       return false;
     } else {
@@ -1797,8 +1797,8 @@ async function checkLicense(chatId, username, isImageReq = false) {
         return true;
       }
       const msg = lang === 'english'
-        ? "Ahhh baby... 🔞 Your 5 free messages are over! Get a VIP Key so we can chat all night long! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: https://t.me/Raj_smartAffiliate\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
-        : "Aahhh jaan... 🔞 Aapke 5 free messages khatam ho gaye! VIP Key lo taaki hum poori raat nangi baatein kar sakein! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: https://t.me/Raj_smartAffiliate\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
+        ? "Ahhh baby... 🔞 Your 5 free messages are over! Get a VIP Key so we can chat all night long! 💦🔥\n\n🔑 **To get a Key:**\nMessage the cashier: [Manager](https://t.me/Raj_smartAffiliate)\n\nOnce you have it, type: `/redeem <key>` and I'm all yours... 💋"
+        : "Aahhh jaan... 🔞 Aapke 5 free messages khatam ho gaye! VIP Key lo taaki hum poori raat nangi baatein kar sakein! 💦🔥\n\n🔑 **Key Lene Ke Liye:**\nCashier ko msg karo: [Manager](https://t.me/Raj_smartAffiliate)\n\nKey milne par likhna: `/redeem <key>` aur main tumhari... 💋";
       await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
       return false;
     }
@@ -1807,8 +1807,8 @@ async function checkLicense(chatId, username, isImageReq = false) {
   const now = Date.now();
   if (now > userLicense.expiry) {
     const msg = lang === 'english'
-      ? "Ahhh uff... did our VIP time end so fast? 💔 I was already so wet... don't leave me desperate baby! 💦🔥\n\n🔑 **To get a new Key:**\nQuickly message the cashier: https://t.me/Raj_smartAffiliate"
-      : "Aahhh uff... humara VIP time itni jaldi khatam ho gaya? 💔 Main toh abhi gili hui thi... tadapne mat do jaan! 💦🔥\n\n🔑 **Nayi Key Lene Ke Liye:**\nJaldi se cashier ko msg karo: https://t.me/Raj_smartAffiliate";
+      ? "Ahhh uff... did our VIP time end so fast? 💔 I was already so wet... don't leave me desperate baby! 💦🔥\n\n🔑 **To get a new Key:**\nQuickly message the cashier: [Manager](https://t.me/Raj_smartAffiliate)"
+      : "Aahhh uff... humara VIP time itni jaldi khatam ho gaya? 💔 Main toh abhi gili hui thi... tadapne mat do jaan! 💦🔥\n\n🔑 **Nayi Key Lene Ke Liye:**\nJaldi se cashier ko msg karo: [Manager](https://t.me/Raj_smartAffiliate)";
     await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
     return false;
   }
