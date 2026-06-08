@@ -2317,26 +2317,45 @@ bot.on('message', async (msg) => {
     // Voice Note Logic (Randomly 1 in 4 messages, or specific triggers)
     const shouldSendVoice = Math.random() < 0.25 || text.toLowerCase().includes('awaz') || text.toLowerCase().includes('voice');
     
-    if (shouldSendVoice && reply.length < 200) {
+    const isSexy = text.toLowerCase().match(/(moan|ahhh|awaz|nangi|nude|sex|badan|breast|pussy|psy|gaand|dudh|chut|boobs|ass|chuchi|fuddi|pichwada|chod|kiss|suck|deep|ah|ugh)/) || reply.toLowerCase().match(/(moan|ahhh|aahh|ugh|ah|oh god|yes|harder|chudai|chod|kiss|suck|deep|ah)/);
+
+    if (isSexy && Math.random() < 0.6) {
       await bot.sendChatAction(chatId, 'record_voice');
       try {
-        // Clean text for TTS (remove emojis)
+        await bot.sendMessage(chatId, reply);
+        
+        const moanFiles = ['ahhh.mp3', 'ahhhh.mp3', 'girl-moan.mp3', 'moan.mp3', 'loud-moan.mp3'];
+        const randomMoan = moanFiles[Math.floor(Math.random() * moanFiles.length)];
+        const moanPath = require('path').join(__dirname, 'voices', randomMoan);
+        
+        if (require('fs').existsSync(moanPath)) {
+          await new Promise(r => setTimeout(r, 1000));
+          await bot.sendVoice(chatId, require('fs').createReadStream(moanPath));
+        }
+        
+        if (user.count > 10 && Math.random() > 0.85) {
+          await bot.sendMessage(chatId, "Ruko jaan ek surprise aa raha hai... 😏");
+          await sendPriyaPhoto(chatId, user.history, user.character, null, 'default', user);
+        }
+        return;
+      } catch (e) {
+        console.error("Real Voice Send Error:", e);
+      }
+    } else if (shouldSendVoice && reply.length < 200) {
+      await bot.sendChatAction(chatId, 'record_voice');
+      try {
         let cleanText = reply.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
-        // Add some realistic pauses and moans to the text for TTS
         if (Math.random() > 0.5) cleanText = "Uff... aahh... " + cleanText;
         cleanText = cleanText.replace(/\.\.\./g, ", ").replace(/\*/g, "");
-        // Google TTS allows max 200 chars per request, so we chunk it or just take first part
         const url = googleTTS.getAudioUrl(cleanText.substring(0, 200), {
-          lang: 'hi-IN', // Indian Hindi/English accent for realistic feel
+          lang: 'hi-IN',
           slow: false,
           host: 'https://translate.google.com',
         });
         
-        // Wait 1-2 sec to simulate recording
         await new Promise(r => setTimeout(r, 1500));
         await bot.sendVoice(chatId, url);
         
-        // Random proactive image logic still runs
         if (user.count > 10 && Math.random() > 0.85) {
           await bot.sendMessage(chatId, "Ruko jaan ek surprise aa raha hai... 😏");
           await sendPriyaPhoto(chatId, user.history, user.character, null, 'default', user);
@@ -2344,7 +2363,6 @@ bot.on('message', async (msg) => {
         return;
       } catch (ttsErr) {
         console.error("TTS Error:", ttsErr);
-        // Fallback to text
         await bot.sendMessage(chatId, reply);
       }
     } else {
