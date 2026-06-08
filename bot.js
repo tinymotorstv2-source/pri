@@ -1992,10 +1992,12 @@ bot.on('callback_query', async (callbackQuery) => {
       }
     } else if (category === 'pussy') {
       actionTxt = `Ruko jaan, ${char.name} apni taangein khol rahi hai... 🔞💦`;
+      const poses = ["lying on bed with legs spread wide open", "sitting on the edge of the bed with legs wide apart", "standing with legs spread apart", "squatting on the floor with knees wide apart", "kneeling with legs spread wide"];
+      const rp = poses[Math.floor(Math.random() * poses.length)];
       if (user.wardrobe) {
-        forceDesc = `intimate close-up photo, lying on bed, legs spread wide open, wearing ${clothing} pulled up, bare skin between thighs, detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, clean shaved smooth pubic area, in ${env}`;
+        forceDesc = `full body photo, ${rp}, wearing ${clothing} pulled up, showing full body, bare skin between thighs, detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, clean shaved smooth pubic area, in ${env}`;
       } else {
-        forceDesc = `intimate close-up photo, lying on bed, legs spread wide open, completely naked, bare skin between thighs, detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, clean shaved smooth pubic area, in ${env}`;
+        forceDesc = `full body photo, ${rp}, completely naked, showing full body, bare skin between thighs, detailed natural vulva, pink labia minora, clitoris, ${char.thighTags}, clean shaved smooth pubic area, in ${env}`;
       }
     } else if (category === 'breasts') {
       actionTxt = `Ruko jaan, ${char.name} apne saare kapde nikal rahi hai... 👙🔥`;
