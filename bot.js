@@ -2339,9 +2339,9 @@ bot.on('message', async (msg) => {
     } else if (q === "🔑 Enter the new Runware API Key:") {
       const key = text.trim();
       const mem = loadMemory();
-      if (!mem.runwareApis) mem.runwareApis = [];
-      if (!mem.runwareApis.includes(key)) {
-        mem.runwareApis.push(key);
+      if (!mem._globalRunwareKeys) mem._globalRunwareKeys = [];
+      if (!mem._globalRunwareKeys.includes(key)) {
+        mem._globalRunwareKeys.push(key);
         saveMemory(mem);
         await bot.sendMessage(chatId, `✅ Added new Runware API key:\n\`${key}\``, { parse_mode: 'Markdown' });
       } else {
