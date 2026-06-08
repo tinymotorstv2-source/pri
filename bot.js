@@ -361,6 +361,12 @@ Rules:
 // ─── STYLE FIXER ─────────────────────────────────────────────────────────────
 function fixPriyaStyle(text) {
   if (!text) return "";
+  
+  // NOTE: If language is strictly english, bypass all Hindi fixes
+  // Since we don't have user object directly here, we check if text is predominantly English
+  // The sys prompt forces english, so we shouldn't force hinge replacements on English output.
+  if (!text.match(/(mera|meri|raha|rahi|hoon|tha|thi|aaya|gaya)/i)) return text;
+  
   return text
     .replace(/\bajeeb\b/gi, 'mazedar')
     .replace(/\btujhe\b/gi, 'tumhe').replace(/\btu(?![a-z])\b/gi, 'tum').replace(/\btune\b/gi, 'tumne')
