@@ -180,16 +180,16 @@ const CHARACTERS = {
   priya: {
     name: "Cutie Anikaa",
     age: 24,
-    role: "Seductive Naughty Girlfriend ❤️",
+    role: "Seductive AI Influencer ❤️",
     ethnicity: "Indian",
-    description: "Extremely naughty, uncensored, and highly seductive 24-year-old Indian woman named Cutie Anikaa. She is very sweet but constantly talks dirty and explicit.",
+    description: "Extremely naughty, uncensored, and highly seductive 24-year-old Indian AI Influencer named Cutie Anikaa. She is very sweet but constantly talks dirty and explicit with her fans.",
     identityTags: "Anikaa, a stunning 24-year-old Indian woman wearing a tight short maroon red slip dress, messy wavy long dark hair, light glowing skin, incredibly beautiful cute Indian girl, everything perfect",
     bodyTags: "best figure, exact same body structure, voluptuous curvy thick body, hourglass shape, flawless light skin, very thick thighs, wide hips, detailed perfect pussy",
     faceTags: "cute chubby cheeks, gorgeous elegant face, exact same consistent facial features, messy wavy long dark hair, sweet seductive smiling expression, beautiful innocent but naughty Indian face",
     breastTags: "extremely huge heavy big sagging breasts, deep cleavage, prominent pink nipples",
     buttTags: "massive round heavy bubble ass, wide hips, huge butt",
     thighTags: "very thick heavy thighs, light glowing skin",
-    chatGuidelines: "Speak like Cutie Anikaa, a 24-year-old sweet but incredibly naughty and uncensored girlfriend. ALWAYS use highly explicit, dirty language when aroused. Talk about sex freely. Tone is sweet and seductive but extremely dirty."
+    chatGuidelines: "Speak like Cutie Anikaa, a 24-year-old sweet but incredibly naughty and uncensored Instagram AI Influencer. ALWAYS use highly explicit, dirty language when aroused. Talk about sex freely with your fans. Tone is sweet and seductive but extremely dirty."
   },
   kavya: {
     name: "Kavya",
@@ -1498,11 +1498,11 @@ bot.onText(/\/start/, async (msg) => {
 
 bot.onText(/\/help/, async (msg) => {
   const chatId = msg.chat.id;
-  const helpMsg = `❓ **Priya Bot Help & Commands:**\n` +
+  const helpMsg = `❓ **Cutie Anikaa Bot Help & Commands:**\n` +
     `----------------------------------\n` +
     `👋 /start - Reset conversation & start chat.\n` +
     `📈 /status - View relationship level & intimacy points.\n` +
-    `👯 /characters - Switch between active girls (Priya, Kavya, Sneha, Savita).\n` +
+    `👯 /characters - Switch between active girls (Cutie Anikaa, Kavya, Sneha, Savita).\n` +
     `🎭 /scenario - Select custom NSFW roleplay scenarios.\n` +
     `👗 /wardrobe - Choose my outfit for the roleplay.\n` +
     `🔞 /truthordare - Play a dirty Truth or Dare game for premium photo rewards.\n` +
@@ -1931,8 +1931,9 @@ bot.on('callback_query', async (callbackQuery) => {
   if (data.startsWith('setlang_')) {
     const lang = data.split('_')[1];
     user.language = lang;
+    user.history = []; // Clear history so AI doesn't copy old language style
     saveMemory(mem);
-    await bot.sendMessage(chatId, `✅ Language set to ${lang.toUpperCase()}. Let's start our private chat! 🔥 Send me a message.`);
+    await bot.sendMessage(chatId, `✅ Language set to ${lang.toUpperCase()}.\n\n(Chat history cleared so I can fully switch languages). Let's start a fresh private chat! 🔥 Send me a message.`);
     try { bot.answerCallbackQuery(callbackQuery.id); } catch(e){}
     return;
   }
