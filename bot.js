@@ -413,7 +413,7 @@ MEMORY (Use these facts naturally when relevant):
 ${userSettings.longTermMemory || "No memory recorded yet."}
 
 CHAT STYLE & REALISM RULES:
-1. HYPER-REALISTIC ENGLISH & HINGLISH MIX: Speak in a natural, flawless blend of modern English and Hinglish (Hindi/English mix), matching how a sexy, fluent foreigner living in India or talking to an Indian lover would chat. Example: "Oh God, you are so naughty, jaan! Main toh soch rahi thi ki tum aao aur mujhe kiss karo... what do you think?"
+1. LANGUAGE SETTING (${userSettings.language || 'hindi'}): ${userSettings.language === 'english' ? 'Speak strictly in perfect, highly descriptive modern English. Do NOT use any Hindi or Hinglish words.' : 'Speak in a natural, flawless blend of modern English and Hinglish (Hindi/English mix), matching how a sexy, fluent foreigner living in India or talking to an Indian lover would chat. Example: "Oh God, you are so naughty, jaan!"'}
 2. NO CRINGE OR AI CLICHÉS: ABSOLUTELY NEVER use generic, fake-sounding chatbot sentences like "tum pyare lagte ho", "mujhe bechaini hoti hai", "ajeeb", "tumhari baatein mujhe pagal kar rahi hain". Keep the chat natural, realistic, and mature. If you like him, be direct and seductive. If you are angry, say it. Avoid robotic filler sentences.
 3. NO FORCED QUESTIONS: DO NOT end every message with a question. Sometimes just state how you feel, react to him, or make a demand. Only ask a question if it naturally fits the conversation.
 4. EXACT LENGTH & FLOW: Reply NATURALLY and vividly. Do not force your replies to be tiny just because his is. Even if he writes a short 1-word reply, respond with a passionate, engaging, fully-formed emotional message (2-4 sentences) that strictly fits your character. Lead the conversation, tease him, show your personality, and keep the roleplay flow alive!
@@ -1482,7 +1482,8 @@ bot.onText(/\/start/, async (msg) => {
     lastActiveTime: Date.now(),
     chatId: chatId,
     lastProactiveTime: existingUser.lastProactiveTime || null,
-    proactiveCount: 0
+    proactiveCount: 0,
+    language: existingUser.language || 'hindi'
   };
   saveMemory(mem);
 
@@ -1879,7 +1880,20 @@ bot.onText(/\/redeem (.+)/, async (msg, match) => {
   saveMemory(mem);
   
   const dateStr = new Date(expiryDate).toLocaleString();
-  await bot.sendMessage(chatId, `🎉 *License Activated Successfully!*\n\nYour account is now fully unlocked.\n⏳ Valid until: ${dateStr}\n🖼 Image Credits: ${mem._keys[key].images}\n\nEnjoy chatting with me! ❤️`, { parse_mode: 'Markdown' });
+  
+  const opts = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "🇮🇳 Hindi (Hinglish)", callback_data: "setlang_hindi" },
+          { text: "🇺🇸 English Only", callback_data: "setlang_english" }
+        ]
+      ]
+    },
+    parse_mode: 'Markdown'
+  };
+  
+  await bot.sendMessage(chatId, `🎉 *VIP Key Activated Successfully!*\n\nYour account is now fully unlocked.\n⏳ Valid until: ${dateStr}\n🖼 Image Credits: ${mem._keys[key].images}\n\nPlease choose your preferred chat language below: 👇`, opts);
 });
 
 
@@ -1906,6 +1920,16 @@ bot.on('callback_query', async (callbackQuery) => {
 
   const mem = loadMemory();
   const user = getUser(mem, uid);
+
+  // Handle language selection
+  if (data.startsWith('setlang_')) {
+    const lang = data.split('_')[1];
+    user.language = lang;
+    saveMemory(mem);
+    await bot.sendMessage(chatId, `✅ Language set to ${lang.toUpperCase()}. Let's start our private chat! 🔥 Send me a message.`);
+    try { bot.answerCallbackQuery(callbackQuery.id); } catch(e){}
+    return;
+  }
 
   // Update activity tracking and reset proactive count on button click
   user.lastActiveTime = Date.now();
@@ -2314,7 +2338,7 @@ bot.on('message', async (msg) => {
 
   await bot.sendChatAction(chatId, 'typing');
   try {
-    const reply = await askAI(user.history, { character: user.character, scenario: user.scenario, points: user.points, longTermMemory: user.longTermMemory });
+    const reply = await askAI(user.history, { character: user.character, scenario: user.scenario, points: user.points, longTermMemory: user.longTermMemory, language: user.language });
     user.history.push({ role: 'assistant', content: reply });
     saveMemory(mem);
     
