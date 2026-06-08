@@ -2342,30 +2342,6 @@ bot.on('message', async (msg) => {
       } catch (e) {
         console.error("Real Voice Send Error:", e);
       }
-    } else if (shouldSendVoice && reply.length < 200) {
-      await bot.sendChatAction(chatId, 'record_voice');
-      try {
-        let cleanText = reply.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
-        if (Math.random() > 0.5) cleanText = "Uff... aahh... " + cleanText;
-        cleanText = cleanText.replace(/\.\.\./g, ", ").replace(/\*/g, "");
-        const url = googleTTS.getAudioUrl(cleanText.substring(0, 200), {
-          lang: 'hi-IN',
-          slow: false,
-          host: 'https://translate.google.com',
-        });
-        
-        await new Promise(r => setTimeout(r, 1500));
-        await bot.sendVoice(chatId, url);
-        
-        if (user.count > 10 && Math.random() > 0.85) {
-          await bot.sendMessage(chatId, "Ruko jaan ek surprise aa raha hai... 😏");
-          await sendPriyaPhoto(chatId, user.history, user.character, null, 'default', user);
-        }
-        return;
-      } catch (ttsErr) {
-        console.error("TTS Error:", ttsErr);
-        await bot.sendMessage(chatId, reply);
-      }
     } else {
       await bot.sendMessage(chatId, reply);
     }
