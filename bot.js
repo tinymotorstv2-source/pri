@@ -1763,7 +1763,9 @@ bot.onText(/\/admin/, async (msg) => {
       totalRemaining += left;
     });
     
-    remainingText = `🔹 **Remaining Images (Est):** ~${totalRemaining} images (20 per $0.05 key)\n`;
+    const activeKeyStr = currentActiveRunwareKey ? currentActiveRunwareKey.substring(0, 15) + "..." : "None or initializing...";
+    remainingText = `🔹 **Active Key:** \`${activeKeyStr}\`\n` +
+                    `🔹 **Remaining Images (Est):** ~${totalRemaining} images (20 per $0.05 key)\n`;
   } else if (PRODIA_KEY) {
     activeApi = "⭐ Prodia API (Premium Fallback)";
     activeModel = "SDXL";
