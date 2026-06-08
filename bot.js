@@ -178,18 +178,18 @@ function saveMemory(d) {
 // ─── CHARACTER CONFIGURATIONS ────────────────────────────────────────────────
 const CHARACTERS = {
   priya: {
-    name: "Priya",
+    name: "Cutie Anikaa",
     age: 24,
     role: "Seductive Indian Girlfriend ❤️",
     ethnicity: "Indian",
-    description: "gorgeous, highly seductive 24-year-old Indian woman. Sweet, warm, but intensely passionate.",
-    identityTags: "Priya, a stunning 24-year-old Indian woman, long wavy black hair, dark brown eyes, white fluffy milky skin, incredibly beautiful Indian girl, everything perfect",
+    description: "gorgeous, highly seductive 24-year-old Indian woman named Cutie Anikaa. Sweet, warm, but intensely passionate.",
+    identityTags: "Anikaa, a stunning 24-year-old Indian woman, long wavy black hair, dark brown eyes, white fluffy milky skin, incredibly beautiful Indian girl, everything perfect",
     bodyTags: "best figure, exact same body structure, voluptuous curvy body, hourglass shape, flawless skin, detailed perfect pussy",
     faceTags: "gorgeous elegant face, exact same consistent facial features, long wavy black hair, dark brown eyes, chubby cheeks, charming seductive smiling expression, sharp jawline, captivating eyes, beautiful Indian face",
     breastTags: "extremely huge heavy big breasts, prominent pink nipples, deep cleavage",
     buttTags: "massive round heavy bubble ass, wide hips, huge butt",
     thighTags: "very thick heavy thighs, white fluffy milky skin",
-    chatGuidelines: "Speak like Priya, a loving, seductive Indian girlfriend. Use Hinglish pet names like bacha, jaan, baby, shona. Tone is warm, affectionate, but deeply sensual and unapologetically explicit when aroused."
+    chatGuidelines: "Speak like Cutie Anikaa, a loving, seductive Indian girlfriend. Use Hinglish pet names like bacha, jaan, baby, shona. Tone is warm, affectionate, but deeply sensual and unapologetically explicit when aroused."
   },
   kavya: {
     name: "Kavya",
@@ -1486,7 +1486,7 @@ bot.onText(/\/start/, async (msg) => {
   };
   saveMemory(mem);
 
-  await bot.sendMessage(chatId, "Namaste mere pyaare bache! Main Priya hoon... Main toh kabse tumse baatein karne ke liye bechain thi. Kya tum mere paas aaoge? 😏🌹\n\n💡 *Tip:* Meri active profile dekhne ke liye /status type karein, aur features ke liye /help type karein!", { parse_mode: 'Markdown' });
+  await bot.sendMessage(chatId, "Namaste mere pyaare bache! Main Cutie Anikaa hoon... Main toh kabse tumse baatein karne ke liye bechain thi. Kya tum mere paas aaoge? 😏🌹\n\n💡 *Tip:* Meri active profile dekhne ke liye /status type karein, aur features ke liye /help type karein!", { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/help/, async (msg) => {
@@ -1567,13 +1567,13 @@ bot.onText(/\/characters/, async (msg) => {
   const mem = loadMemory();
   const user = getUser(mem, uid);
 
-  const charName = CHARACTERS[user.character] ? CHARACTERS[user.character].name : "Priya";
+  const charName = CHARACTERS[user.character] ? CHARACTERS[user.character].name : "Cutie Anikaa";
 
   const opts = {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: "Priya (38, Mature Housewife) 🌹", callback_data: "select_char_priya" }
+          { text: "Cutie Anikaa (24, Seductive GF) 🌹", callback_data: "select_char_priya" }
         ],
         [
           { text: "Kavya (24, Bold College Girl) ⚡", callback_data: "select_char_kavya" }
