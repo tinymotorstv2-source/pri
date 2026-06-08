@@ -1790,6 +1790,7 @@ bot.onText(/\/admin/, async (msg) => {
         [{ text: "📜 List All VIP Keys", callback_data: "admin_listkeys" }],
         [{ text: "➕ Add Runware API Key", callback_data: "admin_addapi" }],
         [{ text: "📋 List Runware API Keys", callback_data: "admin_listapi" }],
+        [{ text: "🎤 Upload Sexy Voice Note", callback_data: "admin_uploadvoice" }],
         [{ text: "💬 Return to Chat Mode", callback_data: "admin_chat" }]
       ]
     },
@@ -1949,6 +1950,8 @@ bot.on('callback_query', async (callbackQuery) => {
       let res = "🔑 *Active Runware API Keys:*\n\n";
       apis.forEach((key, i) => { res += `${i + 1}. \`${key}\`\n`; });
       await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
+    } else if (data === 'admin_uploadvoice') {
+      await bot.sendMessage(chatId, "🎤 **Voice Upload Mode**\n\nAbhi isi chat mein directly koi bhi `.mp3`, `.ogg`, ya apna record kiya hua Voice Note send/forward kar do. \n\nBot usko automatically pakad lega aur `voices` list mein add kar dega!", { parse_mode: 'Markdown' });
     } else if (data === 'admin_chat') {
       await bot.sendMessage(chatId, "💬 You are now in Chat Mode. Send any message to talk to the AI!");
     }
