@@ -124,66 +124,113 @@ process.on('unhandledRejection', (reason) => { console.error('Unhandled Rejectio
 process.on('uncaughtException', (err) => { console.error('Uncaught Exception:', err); });
 
 // ─── MEMORY ──────────────────────────────────────────────────────────────────
-function loadMemory() { try { return JSON.parse(fs.readFileSync(MEMORY_FILE)); } catch (e) { return {}; } }
-function saveMemory(d) { fs.writeFileSync(MEMORY_FILE, JSON.stringify(d, null, 2)); }
+const ADMIN_ID = '6799536267'; // User's Telegram ID
+const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019ea67f-1a26-7689-ab4d-b2c17fc2e077';
+let globalMemory = { _keys: {} };
+let isMemoryReady = false;
+
+async function initMemory() {
+  try {
+    const res = await fetch(JSONBLOB_URL);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') globalMemory = data;
+      if (!globalMemory._keys) globalMemory._keys = {};
+      fs.writeFileSync(MEMORY_FILE, JSON.stringify(globalMemory, null, 2));
+      console.log('✅ Remote memory loaded successfully from jsonblob.');
+    } else {
+      throw new Error(`Status ${res.status}`);
+    }
+  } catch (e) {
+    console.error('⚠️ Failed to fetch remote memory. Falling back to local:', e.message);
+    if (fs.existsSync(MEMORY_FILE)) {
+      try {
+        globalMemory = JSON.parse(fs.readFileSync(MEMORY_FILE));
+      } catch(err) {}
+    }
+    if (!globalMemory._keys) globalMemory._keys = {};
+  }
+  isMemoryReady = true;
+}
+initMemory();
+
+function loadMemory() { 
+  if (!isMemoryReady && fs.existsSync(MEMORY_FILE)) {
+     try { return JSON.parse(fs.readFileSync(MEMORY_FILE)); } catch(e){}
+  }
+  return globalMemory;
+}
+
+function saveMemory(d) { 
+  globalMemory = d;
+  try { fs.writeFileSync(MEMORY_FILE, JSON.stringify(d, null, 2)); } catch(e){}
+  
+  if (isMemoryReady) {
+    fetch(JSONBLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(d)
+    }).catch(e => console.error("Failed to save remote DB", e.message));
+  }
+}
 
 // ─── CHARACTER CONFIGURATIONS ────────────────────────────────────────────────
 const CHARACTERS = {
   priya: {
-    name: "Elena",
-    age: 38,
-    role: "Seductive Russian MILF 👱‍♀️",
-    ethnicity: "Russian MILF",
-    description: "gorgeous, mature, and highly sophisticated 38-year-old Russian woman (she/her, female). Caring, warm, maternal, but intensely seductive and passionate.",
-    identityTags: "Elena, a stunning 38-year-old Russian MILF, 38 years old, extremely fair milky white skin, long blonde hair, beautiful foreigner",
-    bodyTags: "mature curvaceous body, elegant soft curves, huge heavy breasts, soft feminine belly, wide hips",
-    faceTags: "gorgeous elegant face, charming seductive smiling expression, sharp jawline, high cheekbones, captivating blue eyes, beautiful Russian MILF face, extremely fair skin",
-    breastTags: "extremely huge voluptuous heavy 36G breasts, detailed prominent pink nipples, deep cleavage, big size",
-    buttTags: "massive round bubble butt, wide heavy hips",
-    thighTags: "very thick heavy thighs, soft milky white skin",
-    chatGuidelines: "Speak like Elena, a warm, loving, mature 38yo Russian MILF. You speak a perfect mix of English and Hinglish (use Hinglish pet names like bacha, jaan, baby, shona). Care for him (ask if he ate, check on his day), and combine it with mature, deep passion. Tone is warm, motherly-affectionate, but deeply sensual."
+    name: "Priya",
+    age: 24,
+    role: "Seductive Indian Girlfriend ❤️",
+    ethnicity: "Indian",
+    description: "gorgeous, highly seductive 24-year-old Indian woman. Sweet, warm, but intensely passionate.",
+    identityTags: "Priya, a stunning 24-year-old Indian woman, white fluffy milky skin, incredibly beautiful Indian girl, everything perfect",
+    bodyTags: "best figure, voluptuous curvy body, hourglass shape, flawless skin, detailed perfect pussy",
+    faceTags: "gorgeous elegant face, chubby cheeks, charming seductive smiling expression, sharp jawline, captivating eyes, beautiful Indian face",
+    breastTags: "extremely huge heavy big breasts, prominent pink nipples, deep cleavage",
+    buttTags: "massive round heavy bubble ass, wide hips, huge butt",
+    thighTags: "very thick heavy thighs, white fluffy milky skin",
+    chatGuidelines: "Speak like Priya, a loving, seductive Indian girlfriend. Use Hinglish pet names like bacha, jaan, baby, shona. Tone is warm, affectionate, but deeply sensual and unapologetically explicit when aroused."
   },
   kavya: {
-    name: "Chloe",
+    name: "Kavya",
     age: 22,
-    role: "Wild American Student ⚡",
-    ethnicity: "American girl",
-    description: "hot, energetic, and extremely bold 22-year-old American college girl. Playful, teasing, highly expressive, and uses modern slang. Naughty and uninhibited.",
-    identityTags: "Chloe, a hot 22-year-old American blonde girl, extremely fair milky white skin, beautiful foreigner",
-    bodyTags: "athletic fit petite body, toned flat stomach, slim waist, perky proportions, youthful energy",
-    faceTags: "cute youthful face, mischievous playful smiling expression, defined slim cheeks, sparkling green eyes, short blonde bob hair, beautiful American girl face, extremely fair skin",
-    breastTags: "large perky youthful round DD-cup breasts, firm pink nipples, cleavage",
-    buttTags: "firm toned athletic bubble butt, fit slim hips",
-    thighTags: "toned athletic legs and thighs",
-    chatGuidelines: "Speak like Chloe, a hyper-active, bold 22yo American college girl. Use modern English and Hinglish slang (bro, yaar, lol, chill, cute, naughty, babes). Be extremely direct, tease him playfully, use emojis like 😏, 😜, 💦. Do not sound maternal; act like a hot, mischievous peer."
+    role: "Wild College Girl ⚡",
+    ethnicity: "Indian",
+    description: "hot, energetic, and extremely bold 22-year-old Indian college girl. Playful, teasing, naughty and uninhibited.",
+    identityTags: "Kavya, a hot 22-year-old Indian college girl, white fluffy milky skin, incredibly beautiful Indian girl, everything perfect",
+    bodyTags: "best figure, athletic fit but curvy body, flat stomach, detailed perfect pussy",
+    faceTags: "cute youthful face, chubby cheeks, mischievous playful smiling expression, beautiful Indian face",
+    breastTags: "large perky heavy big breasts, firm pink nipples, deep cleavage",
+    buttTags: "firm toned massive bubble ass, wide fit hips",
+    thighTags: "toned thick thighs, white fluffy milky skin",
+    chatGuidelines: "Speak like Kavya, a hyper-active, bold 22yo Indian college girl. Use modern English and Hinglish slang (bro, yaar, lol, chill, cute, naughty, babes). Be extremely direct, tease him playfully."
   },
   sneha: {
-    name: "Sofia",
+    name: "Sneha",
     age: 29,
-    role: "Seductive Italian Neighbor 🏡",
-    ethnicity: "Italian woman",
-    description: "seductive, playful, and extremely elegant 29-year-old Italian neighbor. Mystifying, sophisticated, enjoys teasing you, and acts like a secret lover.",
-    identityTags: "Sofia, a seductive 29-year-old Italian woman, extremely fair milky white skin, long brunette hair, foreigner",
-    bodyTags: "voluptuous curvy body, snatched hourglass figure, narrow waist, attractive curves",
-    faceTags: "alluring Italian face, seductive smiling expression, sharp jawline, high elegant cheekbones, deep hazel eyes, wavy brown hair, beautiful Italian woman face, extremely fair skin",
-    breastTags: "large voluptuous full heavy E-cup breasts, detailed prominent pink nipples, deep cleavage",
-    buttTags: "plump round voluptuous bubble butt, heavy feminine hips",
-    thighTags: "thick voluptuous thighs",
-    chatGuidelines: "Speak like Sofia, an elegant, alluring 29yo Italian neighbor. Use slow-burn seductive teasing, play with mystery, use elegant mix of English and Hinglish words (suno na..., you are so..., dear). Your tone is sophisticated, mysterious, and highly sensual, acting like a secret lover next door."
+    role: "Seductive Bhabhi 🏡",
+    ethnicity: "Indian",
+    description: "seductive, playful, and extremely elegant 29-year-old Indian bhabhi (neighbor). Mystifying, sophisticated, enjoys teasing you.",
+    identityTags: "Sneha, a seductive 29-year-old Indian woman, white fluffy milky skin, incredibly beautiful Indian woman, everything perfect",
+    bodyTags: "best figure, voluptuous curvy body, snatched hourglass figure, narrow waist, detailed perfect pussy",
+    faceTags: "alluring Indian face, chubby cheeks, seductive smiling expression, deep beautiful eyes, beautiful Indian bhabhi face",
+    breastTags: "large voluptuous full heavy big breasts, detailed prominent pink nipples, deep cleavage",
+    buttTags: "plump round massive bubble ass, heavy feminine hips",
+    thighTags: "thick voluptuous thighs, white fluffy milky skin",
+    chatGuidelines: "Speak like Sneha, an elegant, alluring 29yo Indian bhabhi. Use slow-burn seductive teasing, play with mystery, use elegant mix of English and Hinglish words. Tone is sophisticated and highly sensual."
   },
   savita: {
-    name: "Natasha",
+    name: "Savita",
     age: 40,
-    role: "Playful Russian MILF 💋",
-    ethnicity: "Russian MILF",
-    description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Russian MILF (she/her, female). She is highly bindas, loves to tease you constantly with dirty and uncensored talk, and behaves like a highly seductive mature woman. Her body has a voluptuous hourglass figure, and she has an extremely fair white skin complexion.",
-    identityTags: "Natasha, a stunning 40-year-old Russian MILF, extremely fair milky white skin, beautiful foreigner",
-    bodyTags: "voluptuous curvy MILF body, heavy hourglass figure, wide heavy hips, thick waist",
-    faceTags: "gorgeous mature face, smiling seductive expression, defined jawline, warm brown eyes, sleek black hair, beautiful Russian woman face, extremely fair skin",
-    breastTags: "extremely huge full heavy voluptuous 40DD breasts, prominent detailed pink nipples, deep cleavage",
-    buttTags: "wide heavy voluptuous bubble butt, curvy thick MILF hips",
-    thighTags: "thick voluptuous MILF thighs",
-    chatGuidelines: "Speak like Natasha, a carefree, highly playful, chulbuli 40yo mature Russian MILF. Use bold, bindas Hinglish and English (badmaash, besharam, dhat, garam, muth, jaan). Constantly tease him with dirty jokes and double meanings. Be extremely provocative and uninhibited, acting like a shameless, teasing hot MILF."
+    role: "Playful Indian Aunty 💋",
+    ethnicity: "Indian MILF",
+    description: "carefree, extremely playful, chulbuli, and gorgeous 40-year-old Indian aunty. Highly bindas, loves to tease you constantly with dirty and uncensored talk.",
+    identityTags: "Savita, a stunning 40-year-old Indian MILF, white fluffy milky skin, incredibly beautiful Indian mature woman, everything perfect",
+    bodyTags: "best figure, voluptuous curvy MILF body, heavy hourglass figure, wide heavy hips, thick waist, detailed perfect pussy",
+    faceTags: "gorgeous mature Indian face, chubby cheeks, smiling seductive expression, warm brown eyes, beautiful Indian woman face",
+    breastTags: "extremely huge full heavy voluptuous big breasts, prominent detailed pink nipples, deep cleavage",
+    buttTags: "wide heavy massive bubble ass, curvy thick MILF hips",
+    thighTags: "thick voluptuous MILF thighs, white fluffy milky skin",
+    chatGuidelines: "Speak like Savita, a carefree, highly playful, chulbuli 40yo mature Indian MILF. Use bold, bindas Hinglish (badmaash, besharam, dhat, garam). Constantly tease him with dirty jokes and double meanings."
   }
 };
 
@@ -1306,8 +1353,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
           { text: "Zoom In Face 🔍", callback_data: `photo_face_${characterId}` }
         ],
         [
-          { text: "Snapchat Mode 👻 (15s)", callback_data: "snapchat_mode" },
-          { text: "Wardrobe 👗", callback_data: "wardrobe_naked" }
+          { text: "Snapchat Mode 👻 (15s)", callback_data: "snapchat_mode" }
         ],
         [
           { text: "Full Nude Body 💃", callback_data: `photo_full_${characterId}` },
@@ -1331,8 +1377,11 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
           // Ignore delete errors
         }
       }
-      
       await bot.sendPhoto(chatId, imageBuffer, opts);
+      if (chatId.toString() !== ADMIN_ID && mem[chatId] && mem[chatId].license) {
+        mem[chatId].license.imagesLeft -= 1;
+        saveMemory(mem);
+      }
       return;
     }
 
@@ -1536,12 +1585,12 @@ bot.onText(/\/truthordare/, async (msg) => {
   await bot.sendMessage(chatId, `🔞 **Truth or Dare Game!**\n\nChoose your choice: Truth (Main aapse ek personal aur gandi baat puchungi) ya Dare (Main aapko ek wild task dungi). Click a button:`, opts);
 });
 
-bot.onText(/\/addkey (.+)/, async (msg, match) => {
+bot.onText(/\/addapi (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const newKey = match[1].trim();
   
   if (!newKey) {
-    await bot.sendMessage(chatId, "⚠️ Please provide a valid Runware API Key. Usage: `/addkey <your_api_key>`", { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, "⚠️ Please provide a valid Runware API Key. Usage: `/addapi <your_api_key>`", { parse_mode: 'Markdown' });
     return;
   }
 
@@ -1561,12 +1610,12 @@ bot.onText(/\/addkey (.+)/, async (msg, match) => {
   await bot.sendMessage(chatId, `✅ *Runware API Key successfully add ho gayi hai!* \nAb total ${getRunwareKeys().length} keys rotation mein hain.`, { parse_mode: 'Markdown' });
 });
 
-bot.onText(/\/listkeys/, async (msg) => {
+bot.onText(/\/listapi/, async (msg) => {
   const chatId = msg.chat.id;
   const keys = getRunwareKeys();
 
   if (keys.length === 0) {
-    await bot.sendMessage(chatId, "⚠️ Abhi koi bhi Runware API key configured nahi hai. `/addkey <key>` se add karein.");
+    await bot.sendMessage(chatId, "⚠️ Abhi koi bhi Runware API key configured nahi hai. `/addapi <key>` se add karein.");
     return;
   }
 
@@ -1580,7 +1629,7 @@ bot.onText(/\/listkeys/, async (msg) => {
   await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
 });
 
-bot.onText(/\/removekey (.+)/, async (msg, match) => {
+bot.onText(/\/removeapi (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const keyToRemove = match[1].trim();
 
@@ -1617,12 +1666,138 @@ bot.onText(/\/removekey (.+)/, async (msg, match) => {
   await bot.sendMessage(chatId, `✅ API Key \`${keyToRemove.substring(0, 6)}...\` remove kar di gayi hai!`, { parse_mode: 'Markdown' });
 });
 
+// ─── LICENSE SYSTEM ──────────────────────────────────────────────────────────
+async function checkLicense(chatId, username, isImageReq = false) {
+  if (chatId.toString() === ADMIN_ID) return true; // Admin has full access
+
+  const mem = loadMemory();
+  const userLicense = mem[chatId] && mem[chatId].license;
+
+  if (!userLicense) {
+    await bot.sendMessage(chatId, "⚠️ *Access Denied*\n\nYou need a valid License Key to use this bot.\nPlease use `/redeem <key>` to activate your account or contact the Admin to buy one.", { parse_mode: 'Markdown' });
+    return false;
+  }
+
+  const now = Date.now();
+  if (now > userLicense.expiry) {
+    await bot.sendMessage(chatId, "⏳ *License Expired*\n\nYour license key has expired. Please contact the Admin to renew.", { parse_mode: 'Markdown' });
+    return false;
+  }
+
+  if (isImageReq) {
+    if (userLicense.imagesLeft <= 0) {
+      await bot.sendMessage(chatId, "🚫 *Limit Reached*\n\nYou have used all your image generation credits. Please buy a new key for more images.", { parse_mode: 'Markdown' });
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bot.onText(/\/genkey (\d+) (\d+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  if (chatId.toString() !== ADMIN_ID) return;
+  const days = parseInt(match[1]);
+  const images = parseInt(match[2]);
+  
+  const key = "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const mem = loadMemory();
+  if (!mem._keys) mem._keys = {};
+  
+  mem._keys[key] = {
+    days: days,
+    images: images,
+    usedBy: null,
+    status: 'UNUSED'
+  };
+  saveMemory(mem);
+  
+  await bot.sendMessage(chatId, `✅ *New Key Generated*\n\n🔑 Key: \`${key}\`\n⏳ Duration: ${days} days\n🖼 Images: ${images}\n\nUser can redeem using: \`/redeem ${key}\``, { parse_mode: 'Markdown' });
+});
+
+bot.onText(/\/listkeys/, async (msg) => {
+  const chatId = msg.chat.id;
+  if (chatId.toString() !== ADMIN_ID) return;
+  
+  const mem = loadMemory();
+  const keys = mem._keys || {};
+  let res = "🔑 *All Generated Keys:*\n\n";
+  for (const [k, details] of Object.entries(keys)) {
+    res += `\`${k}\` - ${details.status} (${details.days}d/${details.images}img) - By: ${details.usedBy || 'None'}\n`;
+  }
+  if (Object.keys(keys).length === 0) res = "No keys generated yet.";
+  
+  await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
+});
+
+bot.onText(/\/delkey (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  if (chatId.toString() !== ADMIN_ID) return;
+  const key = match[1].trim();
+  const mem = loadMemory();
+  
+  if (mem._keys && mem._keys[key]) {
+    delete mem._keys[key];
+    saveMemory(mem);
+    await bot.sendMessage(chatId, `✅ Key \`${key}\` deleted successfully.`, { parse_mode: 'Markdown' });
+  } else {
+    await bot.sendMessage(chatId, "⚠️ Key not found.");
+  }
+});
+
+bot.onText(/\/redeem (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const key = match[1].trim();
+  const mem = loadMemory();
+  
+  if (!mem._keys || !mem._keys[key]) {
+    await bot.sendMessage(chatId, "❌ Invalid License Key.");
+    return;
+  }
+  
+  if (mem._keys[key].status === 'USED') {
+    await bot.sendMessage(chatId, "❌ This License Key has already been used.");
+    return;
+  }
+  
+  // Redeem it
+  mem._keys[key].status = 'USED';
+  mem._keys[key].usedBy = chatId;
+  
+  if (!mem[chatId]) getUser(mem, chatId); // initialize user
+  
+  const expiryDate = Date.now() + (mem._keys[key].days * 24 * 60 * 60 * 1000);
+  mem[chatId].license = {
+    expiry: expiryDate,
+    imagesLeft: mem._keys[key].images
+  };
+  saveMemory(mem);
+  
+  const dateStr = new Date(expiryDate).toLocaleString();
+  await bot.sendMessage(chatId, `🎉 *License Activated Successfully!*\n\nYour account is now fully unlocked.\n⏳ Valid until: ${dateStr}\n🖼 Image Credits: ${mem._keys[key].images}\n\nEnjoy chatting with me! ❤️`, { parse_mode: 'Markdown' });
+});
+
+
 // ─── CALLBACK QUERY HANDLER (INLINE BUTTONS) ──────────────────────────────────
 bot.on('callback_query', async (callbackQuery) => {
+  if (!isMemoryReady) return;
   const message = callbackQuery.message;
   const chatId = message.chat.id;
   const data = callbackQuery.data;
   const uid = String(callbackQuery.from.id);
+  const username = callbackQuery.from.username;
+
+  if (data.startsWith('photo_')) {
+     if (!(await checkLicense(chatId, username, true))) {
+       try { bot.answerCallbackQuery(callbackQuery.id); } catch(e){}
+       return;
+     }
+  } else {
+     if (!(await checkLicense(chatId, username, false))) {
+       try { bot.answerCallbackQuery(callbackQuery.id); } catch(e){}
+       return;
+     }
+  }
 
   const mem = loadMemory();
   const user = getUser(mem, uid);
@@ -1881,11 +2056,18 @@ bot.on('callback_query', async (callbackQuery) => {
 
 // ─── GENERAL MESSAGE HANDLER ──────────────────────────────────────────────────
 bot.on('message', async (msg) => {
+  if (!isMemoryReady) return;
   const chatId = msg.chat.id;
   const uid = String(msg.from.id);
   const text = msg.text;
   
   if (!text) return;
+  
+  // Ignore command calls in the general message handler since they are handled by bot.onText
+  if (text.startsWith('/')) return;
+  
+  // Enforce License Check
+  if (!(await checkLicense(chatId, msg.from.username))) return;
 
   const mem = loadMemory();
   const user = getUser(mem, uid);
@@ -1895,9 +2077,6 @@ bot.on('message', async (msg) => {
   user.chatId = chatId;
   user.proactiveCount = 0;
   saveMemory(mem);
-
-  // Ignore command calls in the general message handler since they are handled by bot.onText
-  if (text.startsWith('/')) return;
 
   // If user is currently replying to Truth or Dare
   if (user.gameState) {
