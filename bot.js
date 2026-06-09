@@ -2059,22 +2059,23 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
     } else if (data === 'admin_listusers') {
       const mem = loadMemory();
-      let usersList = "👥 *Bot Users:*\n\n";
+      let usersList = "👥 <b>Bot Users:</b>\n\n";
       let count = 0;
       for (const [uid, udata] of Object.entries(mem)) {
         if (!uid.startsWith('_') && udata && typeof udata === 'object' && 'points' in udata) {
           count++;
-          const uname = udata.username ? `@${udata.username}` : (udata.name || 'NoName');
-          usersList += `${count}. ${uname} (ID: \`${uid}\`)\n`;
+          let uname = udata.username ? `@${udata.username}` : (udata.name || 'User');
+          uname = uname.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          usersList += `${count}. <a href="tg://user?id=${uid}">${uname}</a> (ID: <code>${uid}</code>)\n`;
         }
       }
-      usersList = `**Total Users: ${count}**\n\n` + usersList;
+      usersList = `<b>Total Users: ${count}</b>\n\n` + usersList;
       
       // Split if too long
       if (usersList.length > 4000) {
         usersList = usersList.substring(0, 4000) + "\n...and more.";
       }
-      await bot.sendMessage(chatId, usersList, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, usersList, { parse_mode: 'HTML' });
     } else if (data === 'admin_uploadvoice') {
       await bot.sendMessage(chatId, "🎤 **Voice Upload Mode**\n\nAbhi isi chat mein directly koi bhi `.mp3`, `.ogg`, ya apna record kiya hua Voice Note send/forward kar do. \n\nBot usko automatically pakad lega aur `voices` list mein add kar dega!", { parse_mode: 'Markdown' });
     } else if (data === 'admin_chat') {
