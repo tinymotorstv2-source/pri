@@ -2519,7 +2519,10 @@ bot.on('voice', async (msg) => {
   try {
     const voicesDir = path.join(__dirname, 'voices');
     if (!fs.existsSync(voicesDir)) fs.mkdirSync(voicesDir);
-    await bot.downloadFile(msg.voice.file_id, voicesDir);
+    const downloadedPath = await bot.downloadFile(msg.voice.file_id, voicesDir);
+    // Telegram downloads to subfolders like voices/voice/file_1.oga. We move it to voices/ root.
+    const newPath = path.join(voicesDir, `${msg.voice.file_id}.oga`);
+    fs.renameSync(downloadedPath, newPath);
     await bot.sendMessage(msg.chat.id, "✅ Sexy Voice note saved! Bot ab isko adult baaton ke time randomly use karegi. 🔥🎧");
   } catch (e) {
     await bot.sendMessage(msg.chat.id, "❌ Error saving voice: " + e.message);
@@ -2531,7 +2534,9 @@ bot.on('audio', async (msg) => {
   try {
     const voicesDir = path.join(__dirname, 'voices');
     if (!fs.existsSync(voicesDir)) fs.mkdirSync(voicesDir);
-    await bot.downloadFile(msg.audio.file_id, voicesDir);
+    const downloadedPath = await bot.downloadFile(msg.audio.file_id, voicesDir);
+    const newPath = path.join(voicesDir, `${msg.audio.file_id}.mp3`);
+    fs.renameSync(downloadedPath, newPath);
     await bot.sendMessage(msg.chat.id, "✅ Sexy Audio MP3 saved! Bot ab isko adult baaton ke time randomly use karegi. 🔥🎧");
   } catch (e) {
     await bot.sendMessage(msg.chat.id, "❌ Error saving audio: " + e.message);
