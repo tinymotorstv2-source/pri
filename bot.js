@@ -25,13 +25,8 @@ function getRunwareKeys() {
     ? RUNWARE_API_KEY.split(',').map(k => k.trim()).filter(Boolean) 
     : [];
   let memKeys = [];
-  try {
-    if (fs.existsSync(MEMORY_FILE)) {
-      const mem = JSON.parse(fs.readFileSync(MEMORY_FILE));
-      memKeys = mem._globalRunwareKeys || [];
-    }
-  } catch (e) {
-    console.error("Error reading runware keys from memory:", e.message);
+  if (globalMemory && globalMemory._globalRunwareKeys) {
+    memKeys = globalMemory._globalRunwareKeys;
   }
   return Array.from(new Set([...envKeys, ...memKeys]));
 }
@@ -951,9 +946,9 @@ async function generateWithPollinations(prompt, width = 768, height = 1024) {
     const seed = Math.floor(Math.random() * 1000000);
     console.log(`📡 Sending request to Pollinations.ai (Seed: ${seed}, ${width}x${height})...`);
     
-    // Pollinations flux model: keyless, free, unlimited, uncensored
+    // Pollinations any-dark model: keyless, free, unlimited, highly uncensored
     // Using higher resolution for better anatomy detail
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=flux&width=${width}&height=${height}`;
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?safe=false&nologo=true&seed=${seed}&model=any-dark&width=${width}&height=${height}`;
     
     const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 60000 });
     const buffer = Buffer.from(res.data);
