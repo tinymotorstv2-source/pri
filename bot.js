@@ -1868,6 +1868,7 @@ bot.onText(/\/admin/, async (msg) => {
         [{ text: "📜 List All VIP Keys", callback_data: "admin_listkeys" }],
         [{ text: "👥 View All Users", callback_data: "admin_listusers" }],
         [{ text: "➕ Add Runware API Key", callback_data: "admin_addapi" }],
+        [{ text: "➖ Remove Runware API Key", callback_data: "admin_removeapi" }],
         [{ text: "📋 List Runware API Keys", callback_data: "admin_listapi" }],
         [{ text: "🎤 Upload Sexy Voice Note", callback_data: "admin_uploadvoice" }],
         [{ text: "💬 Return to Chat Mode", callback_data: "admin_chat" }]
@@ -2042,6 +2043,10 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
     } else if (data === 'admin_addapi') {
       await bot.sendMessage(chatId, "🔑 Enter the new Runware API Key:", {
+        reply_markup: { force_reply: true, selective: true }
+      });
+    } else if (data === 'admin_removeapi') {
+      await bot.sendMessage(chatId, "➖ Enter the Runware API Key you want to remove:", {
         reply_markup: { force_reply: true, selective: true }
       });
     } else if (data === 'admin_listapi') {
@@ -2363,6 +2368,21 @@ bot.on('message', async (msg) => {
         await bot.sendMessage(chatId, `✅ Added new Runware API key:\n\`${key}\``, { parse_mode: 'Markdown' });
       } else {
         await bot.sendMessage(chatId, "⚠️ This Runware API key is already saved.");
+      }
+      return; // Skip normal chat handling
+    } else if (q === "➖ Enter the Runware API Key you want to remove:") {
+      const keyToRemove = text.trim();
+      const mem = loadMemory();
+      if (mem._globalRunwareKeys && mem._globalRunwareKeys.includes(keyToRemove)) {
+        mem._globalRunwareKeys = mem._globalRunwareKeys.filter(k => k !== keyToRemove);
+        saveMemory(mem);
+        if (currentActiveRunwareKey === keyToRemove) {
+           currentActiveRunwareKey = null;
+           currentRunwareClient = null;
+        }
+        await bot.sendMessage(chatId, `✅ Runware API key removed successfully.`, { parse_mode: 'Markdown' });
+      } else {
+        await bot.sendMessage(chatId, "⚠️ This Runware API key was not found in memory.");
       }
       return; // Skip normal chat handling
     }
