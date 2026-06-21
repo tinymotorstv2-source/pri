@@ -21,7 +21,7 @@ let currentRunwareClient = null;
 let currentActiveRunwareKey = null;
 // ─── MEMORY & CONSTANTS ────────────────────────────────────────────────────────
 const ADMIN_ID = '6799536267'; // User's Telegram ID
-const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019ea67f-1a26-7689-ab4d-b2c17fc2e077';
+const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019eea67-2afe-7446-a386-ed78db425bd7';
 let globalMemory = { _keys: {} };
 let isMemoryReady = false;
 
