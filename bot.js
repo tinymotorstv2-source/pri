@@ -19,6 +19,11 @@ const MEMORY_FILE = path.join(__dirname, 'memory.json');
 // Runware API Key Rotation System
 let currentRunwareClient = null;
 let currentActiveRunwareKey = null;
+// ─── MEMORY & CONSTANTS ────────────────────────────────────────────────────────
+const ADMIN_ID = '6799536267'; // User's Telegram ID
+const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019ea67f-1a26-7689-ab4d-b2c17fc2e077';
+let globalMemory = { _keys: {} };
+let isMemoryReady = false;
 
 function getRunwareKeys() {
   const envKeys = RUNWARE_API_KEY 
@@ -119,11 +124,7 @@ if (RENDER_URL) {
 process.on('unhandledRejection', (reason) => { console.error('Unhandled Rejection:', reason); });
 process.on('uncaughtException', (err) => { console.error('Uncaught Exception:', err); });
 
-// ─── MEMORY ──────────────────────────────────────────────────────────────────
-const ADMIN_ID = '6799536267'; // User's Telegram ID
-const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019ea67f-1a26-7689-ab4d-b2c17fc2e077';
-let globalMemory = { _keys: {} };
-let isMemoryReady = false;
+// ─── MEMORY FUNCTIONS ──────────────────────────────────────────────────────────
 
 async function initMemory() {
   try {
