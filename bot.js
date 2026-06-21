@@ -12,64 +12,13 @@ const HF_TOKEN = process.env.HF_TOKEN || '';
 const AIRFORCE_API_KEY = process.env.AIRFORCE_API_KEY || '';
 const PRODIA_KEY = process.env.PRODIA_KEY || '';
 const RUNWARE_API_KEY = process.env.RUNWARE_API_KEY || '';
-const { Runware } = require('@runware/sdk-js');
-
 const MEMORY_FILE = path.join(__dirname, 'memory.json');
 
-// Runware API Key Rotation System
-let currentRunwareClient = null;
-let currentActiveRunwareKey = null;
 // ─── MEMORY & CONSTANTS ────────────────────────────────────────────────────────
 const ADMIN_ID = '6799536267'; // User's Telegram ID
 const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019eea67-2afe-7446-a386-ed78db425bd7';
 let globalMemory = { _keys: {} };
 let isMemoryReady = false;
-
-function getRunwareKeys() {
-  const envKeys = RUNWARE_API_KEY 
-    ? RUNWARE_API_KEY.split(',').map(k => k.trim()).filter(Boolean) 
-    : [];
-  let memKeys = [];
-  let preferred = null;
-  if (globalMemory) {
-    if (globalMemory._globalRunwareKeys) memKeys = globalMemory._globalRunwareKeys;
-    if (globalMemory._preferredRunwareKey) preferred = globalMemory._preferredRunwareKey;
-  }
-  let allKeys = Array.from(new Set([...envKeys, ...memKeys]));
-  if (preferred && allKeys.includes(preferred)) {
-    allKeys = [preferred, ...allKeys.filter(k => k !== preferred)];
-  }
-  return allKeys;
-}
-
-async function getRunwareClient(specifiedKey = null) {
-  const keys = getRunwareKeys();
-  if (keys.length === 0) return null;
-
-  const keyToUse = specifiedKey || currentActiveRunwareKey || keys[0];
-
-  if (currentRunwareClient && currentActiveRunwareKey === keyToUse) {
-    return currentRunwareClient;
-  }
-
-  console.log(`🔌 Initializing Runware client with key: ${keyToUse.substring(0, 8)}...`);
-  try {
-    const client = new Runware({ apiKey: keyToUse });
-    await client.connect();
-    currentRunwareClient = client;
-    currentActiveRunwareKey = keyToUse;
-    return client;
-  } catch (err) {
-    console.error(`❌ Failed to connect Runware client with key ${keyToUse.substring(0, 8)}...:`, err.message);
-    return null;
-  }
-}
-
-// Pre-connect background initializer
-const initialKeys = getRunwareKeys();
-if (initialKeys.length > 0) {
-  getRunwareClient(initialKeys[0]).catch(e => console.error("Initial Runware connection error:", e.message));
-}
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
 
 // Initialize bot: Use webhook on Render, polling locally
@@ -974,83 +923,7 @@ async function generateWithPollinations(prompt, width = 768, height = 1024) {
   }
 }
 
-// ─── RUNWARE API ENGINE (SDXL/CivitAI — Fastest & Best Quality) ──────────────
-async function generateWithRunware(prompt, negativePrompt = '') {
-  const keys = getRunwareKeys();
-  if (keys.length === 0) {
-    console.log('⚠️ No Runware API keys configured, skipping Runware...');
-    return null;
-  }
-
-  // Find index of current key to start with, or start with 0
-  let startIndex = keys.indexOf(currentActiveRunwareKey);
-  if (startIndex === -1) startIndex = 0;
-
-  // Loop through all keys to try and generate the image
-  for (let i = 0; i < keys.length; i++) {
-    const index = (startIndex + i) % keys.length;
-    const keyToTry = keys[index];
-    console.log(`📡 Trying Runware with key index ${index} (${keyToTry.substring(0, 8)}...)...`);
-
-    const client = await getRunwareClient(keyToTry);
-    if (!client) {
-      console.log(`⚠️ Failed to initialize client for key index ${index}, trying next key.`);
-      continue;
-    }
-
-    try {
-      const startTime = Date.now();
-      const image = await client.requestImages({
-        positivePrompt: prompt,
-        negativePrompt: negativePrompt || "ugly, deformed, bad anatomy, bad hands, extra limbs, clothing, text, watermark",
-        model: "civitai:133005@782002", // Realistic Vision V6.0 B1 (Excellent anatomy)
-        width: 768,
-        height: 1024,
-        numberResults: 1,
-        outputType: ["URL"],
-        steps: 6,
-        CFGScale: 2.0
-      });
-
-      if (image && image[0] && image[0].imageURL) {
-        console.log(`🎉 Runware generated successfully using key index ${index} in ${Date.now() - startTime}ms! Downloading...`);
-        
-        try {
-          const mem = loadMemory();
-          if (!mem._runwareStats) mem._runwareStats = {};
-          if (!mem._runwareStats[keyToTry]) mem._runwareStats[keyToTry] = { generated: 0 };
-          mem._runwareStats[keyToTry].generated += 1;
-          saveMemory(mem);
-        } catch(e) { console.error("Error saving Runware stats:", e); }
-
-        const res = await axios.get(image[0].imageURL, { responseType: 'arraybuffer', timeout: 15000 });
-        
-        // Save this key as the active key for future runs so we start here
-        currentActiveRunwareKey = keyToTry;
-        return Buffer.from(res.data);
-      } else {
-        console.error(`❌ Runware failed to return image URL using key index ${index}`);
-      }
-    } catch (e) {
-      console.error(`❌ Runware generation error using key index ${index}:`, e.error ? e.error.message : e.message);
-      // Key failed, so let's reset client for this key to force re-initialization if ever retried
-      if (currentActiveRunwareKey === keyToTry) {
-        currentRunwareClient = null;
-        currentActiveRunwareKey = null;
-      }
-    }
-  }
-
-  if (keys.length > 0) {
-    try {
-      bot.sendMessage(ADMIN_ID, `🚨 *RUNWARE API ALERT* 🚨\n\nAll ${keys.length} Runware API keys have failed!\nThey might be out of balance or invalid. The bot is automatically falling back to Free APIs (Pollinations/FLUX).\n\nPlease check your Runware Dashboard for balance.`, { parse_mode: 'Markdown' });
-    } catch (err) {
-      console.error("Could not send admin alert", err);
-    }
-  }
-  console.error('❌ All Runware API keys failed.');
-  return null;
-}
+// Removed Runware API Engine completely.
 
 
 
@@ -1067,130 +940,53 @@ function cleanVisualDesc(desc) {
     .trim();
 }
 
-function buildRunwarePrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}, forceDescription = null) {
-  const skinTone = 'flawless pale white skin';
-  const qual = 'masterpiece, photorealistic, RAW photo, highly detailed, 8k';
+function buildHordePrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}, forceDescription = null) {
+  const skinTone = 'extremely fair soft pale skin, glowing flawless skin';
+  const qual = 'masterpiece, 8k resolution, raw photo, ultra-detailed, photorealistic, intricate textures, subsurface scattering, dramatic lighting';
   
-  let p = "";
-  let n = "blurry, low quality, worst quality, cartoon, anime, illustration, censored, dark skin, indian";
+  // Extremely strong negative prompt against clothing to guarantee nude output
+  let n = "ugly, deformed, mutated, extra limbs, bad anatomy, bad hands, missing fingers, cartoon, anime, illustration, 3d render, watermark, text, signature";
   
   const wardrobe = user?.wardrobe || "";
-  const clothesStr = isClothingRequested ? (wardrobe || visualDesc || "wearing seductive outfit") : "completely naked";
+  const clothesStr = isClothingRequested ? (wardrobe || visualDesc || "wearing seductive outfit") : "completely naked, entirely nude, bare skin, fully undressed";
 
-  if (!isClothingRequested) n += ", clothes, clothing, bra, panties, underwear";
+  if (!isClothingRequested) {
+    n += ", clothes, clothing, bra, panties, underwear, fabric, covering, bikini, lingerie, shirt, pants, skirt, dress, shorts, cloth";
+  }
 
-  // If a button was clicked, use the exact forceDescription directly
   if (forceDescription) {
-    p = `${qual}, ${forceDescription}, ${char.identityTags}`;
-    if (category === 'pussy') n += ", hands near crotch, abstract, deformed";
-    if (category === 'pose') n += ", standing, sitting, vertical";
+    let p = `${qual}, ${forceDescription}, ${char.identityTags}`;
+    if (category === 'pussy') n += ", hands near crotch, crossing legs";
     return { prompt: p, negativePrompt: n };
   }
 
-  // Otherwise, use dynamic chat-based visual description
   const chatDesc = cleanVisualDesc(visualDesc);
   const extra = chatDesc ? `, ${chatDesc}` : "";
+  let p = "";
 
   switch (category) {
     case 'pussy':
-      p = `${qual}, macro close-up photography of crotch, ${char.identityTags} lying on bed spreading legs wide open, showing beautiful natural pink labia minora, clean shaved smooth pubic area, ${clothesStr}, ${skinTone}${extra}`;
-      n += ", hands near crotch, abstract, deformed, tumor, mutated";
+      p = `${qual}, extreme macro close-up photography of crotch, ${char.identityTags} lying on bed with legs spread wide open, showing highly detailed beautiful natural pink vulva, clean shaved smooth pubic area, completely bare pussy, ${clothesStr}, ${skinTone}, thick thighs${extra}`;
+      n += ", hands near crotch, crossing legs, covering crotch, blurred crotch, censored";
       break;
     case 'ass':
-      p = `${qual}, ${char.identityTags} viewed from behind bending over seductively, showing bare ${char.buttTags}, ${clothesStr}, ${skinTone}, bedroom${extra}`;
+      p = `${qual}, ${char.identityTags} viewed from behind, bending over seductively, showing massive bare ${char.buttTags}, extremely wide hips, ${clothesStr}, ${skinTone}, bedroom${extra}`;
       n += ", front view, face facing forward";
       break;
     case 'breasts':
-      p = `${qual}, medium shot of ${char.identityTags}, ${char.faceTags}, showing bare ${char.breastTags}, ${clothesStr}, ${skinTone}, bedroom${extra}`;
-      n += ", hands near face, legs";
+      p = `${qual}, medium torso shot of ${char.identityTags}, showing gigantic bare ${char.breastTags}, deep cleavage, hard nipples, ${clothesStr}, ${skinTone}, bedroom${extra}`;
       break;
     case 'face':
-      p = `${qual}, close-up portrait of ${char.identityTags}, ${char.faceTags}, ${clothesStr}, ${skinTone}${extra}`;
+      p = `${qual}, extreme close-up portrait of ${char.identityTags}, ${char.faceTags}, looking directly at viewer, seductive expression, ${clothesStr}, ${skinTone}${extra}`;
       break;
     case 'pose':
-      p = `${qual}, photo of ${char.identityTags} lying flat on her back on a bed, viewed from above, ${clothesStr}, legs slightly spread, looking seductively at camera, showing ${char.breastTags}, ${char.bodyTags}, ${skinTone}${extra}`;
+      p = `${qual}, photo of ${char.identityTags} lying flat on back on a bed, viewed from above, ${clothesStr}, legs spread apart, looking seductively at camera, showing bare ${char.breastTags}, ${char.bodyTags}, ${skinTone}${extra}`;
       n += ", standing, sitting, vertical";
       break;
     default:
-      p = `${qual}, full body shot of ${char.identityTags}, ${char.faceTags}, ${char.bodyTags}, ${clothesStr}, seductive pose, ${skinTone}, bedroom${extra}`;
+      p = `${qual}, full body shot of ${char.identityTags}, ${char.faceTags}, ${char.bodyTags}, completely bare ${char.breastTags}, completely bare pussy, ${clothesStr}, seductive pose, looking at camera, ${skinTone}, bedroom${extra}`;
   }
   return { prompt: p, negativePrompt: n };
-}
-
-function buildProdiaPrompt(category, char, isClothingRequested = false, visualDesc = "", user = {}, forceDescription = null) {
-  // Prodia uses the same logic but longer negative prompt for SDXL standard model
-  const base = buildRunwarePrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
-  base.negativePrompt += ", deformed, ugly, bad anatomy, bad hands, missing fingers, extra digits, extra limbs, mutation, poorly drawn";
-  return base;
-}
-
-// ─── FLUX-OPTIMIZED PROMPT BUILDER ───────────────────────────────────────────
-// Flux-schnell uses only 4 inference steps. It CANNOT handle long complex prompts.
-// Long prompts with identity tags, face descriptions, "perfect hands/eyes" etc.
-// cause Flux to render random body parts (hands in crotch shots, extra limbs).
-// Solution: Build SHORT, focused, category-specific prompts (~30-50 words max).
-// Tested & proven: simple focused prompts produce perfect anatomy every time.
-function buildFluxPrompt(category, char, isClothingRequested = false, visualDesc = "") {
-  // Extract skin tone from character identity tags
-  const skinTone = 'extremely fair white skin, flawless pale, soft fluffy white skin tone, ultra fair complexion, gora skin'; // Strongly forced as per user request
-  const hairDesc = char?.identityTags?.match(/(short curly black hair|long wavy open black hair|long open black hair|dark brown hair[^,]*|long open blonde hair|short curly blonde hair|long wavy open brunette hair)/i);
-  const hair = hairDesc ? hairDesc[0] : 'beautiful blonde hair';
-  
-  const age = char?.age || 30;
-  const bodyTags = char?.bodyTags || (age >= 35 ? 'mature curvy figure' : 'attractive curvy figure');
-  const faceTags = char?.faceTags || 'beautiful face, seductive eyes';
-  const breastTags = char?.breastTags || 'large natural breasts';
-  const buttTags = char?.buttTags || 'curvy round backside, wide hips';
-
-  const eth = char?.ethnicity || "foreigner woman";
-
-  // Handle clothing requests dynamically
-  if (isClothingRequested) {
-    // If it's a button forceDescription, let's detect if it contains pose or body instructions
-    const isFullScene = visualDesc.match(/(viewed from behind|lying on bed|medium shot|full body shot|photo of)/i) !== null;
-    if (isFullScene) {
-      return `${visualDesc}, ${char.identityTags}, ${category !== 'pussy' ? char.faceTags + ', ' : ''}photorealistic, highly detailed, sharp focus, RAW photo, best quality`;
-    }
-
-    const cleanDesc = visualDesc || "wearing seductive outfit";
-    switch (category) {
-      case 'breasts':
-        return `photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, ${breastTags}, ${bodyTags}, wearing seductive low-cut ${cleanDesc}, looking at camera, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
-      case 'ass':
-        return `photo of ${eth} viewed from behind, ${faceTags}, wearing sexy tight ${cleanDesc}, showing ${buttTags}, ${skinTone}, bedroom, warm lighting, photorealistic, RAW photo, best quality`;
-      case 'pussy':
-        const posesC = ["lying on bed with legs spread wide open", "sitting on the edge of the bed with legs wide apart", "standing with legs spread apart", "squatting on the floor with knees wide apart", "kneeling with legs spread wide"];
-        const rndC = posesC[Math.floor(Math.random() * posesC.length)];
-        return `full body photo of ${eth}, ${rndC}, wearing sheer sexy panties or lace lingerie matching ${cleanDesc}, showing full body, ${bodyTags}, ${skinTone}, ${faceTags}, soft warm bedroom lighting, photorealistic, RAW photo, best quality`;
-      case 'face':
-        return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, wearing ${cleanDesc}, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality`;
-      default:
-        return `full body photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, ${bodyTags}, wearing ${cleanDesc}, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality`;
-    }
-  }
-  
-  const cleanDesc = cleanVisualDesc(visualDesc);
-  const extraDesc = cleanDesc ? `, ${cleanDesc}` : "";
-
-  switch (category) {
-    case 'pussy':
-      const posesN = ["lying on bed with legs spread wide open", "sitting on the edge of the bed with legs wide apart", "standing with legs spread apart", "squatting on the floor with knees wide apart", "kneeling with legs spread wide"];
-      const rndN = posesN[Math.floor(Math.random() * posesN.length)];
-      return `full body photo of ${eth}, completely naked, ${rndN}, showing full body, showing highly detailed natural realistic vulva, perfect pink pussy, beautiful pink labia, ${skinTone}, clean shaved smooth pubic area, thick thighs, ${bodyTags}, ${faceTags}, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
-    
-    case 'ass':
-      return `photo of gorgeous ${eth} viewed from behind, bending over seductively, showing bare ${buttTags}, voluptuous wide hips, completely naked, ${faceTags}, looking back over shoulder at camera, ${skinTone}, soft thick thighs, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
-    
-    case 'breasts':
-      return `medium torso shot of gorgeous ${eth}, completely naked, showing bare ${breastTags}, ${skinTone}, ${bodyTags}, bedroom, warm lighting, photorealistic, RAW photo, best quality${extraDesc}`;
-    
-    case 'face':
-      return `close-up portrait photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, ${faceTags}, looking directly at camera, soft bedroom lighting, photorealistic, sharp focus, RAW photo, best quality${extraDesc}`;
-    
-    default:
-      // Full body
-      return `full body photo of gorgeous ${eth}, ${age} years old, ${hair}, ${skinTone}, completely naked, showing full nude body, ${faceTags}, ${breastTags}, ${buttTags}, ${bodyTags}, seductive pose, looking at camera, bedroom, cinematic lighting, photorealistic, RAW photo, best quality${extraDesc}`;
-  }
 }
 
 function hasClothingRequest(history, visualDesc, category) {
@@ -1370,42 +1166,48 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
 
   const statusMsgId = statusMsg ? statusMsg.message_id : null;
 
-  // ═══ RUNWARE → PRODIA → POLLINATIONS → HF FLUX FALLBACK PIPELINE ═══
-  // Priority: Runware (Best/Fastest) → Prodia → Pollinations (FREE) → HF
+  // ═══ AI HORDE → POLLINATIONS → PRODIA → HF FLUX FALLBACK PIPELINE ═══
+  // Priority: AI Horde (Uncensored SDXL) → Pollinations (FREE) → Prodia → HF
   let imageBuffer = null;
   let successModel = null;
 
   // Generate prompts for different engines
-  const fluxPrompt = buildFluxPrompt(category, char, isClothingRequested, visualDesc);
+  const { prompt: hordePrompt, negativePrompt: hordeNegPrompt } = buildHordePrompt(category, char, isClothingRequested, visualDesc, user, forceDescription);
 
-  // Stage 1: Runware (CivitAI SDXL - Best Quality, Sub-second, requires API key)
-  const hasRunwareKeys = getRunwareKeys().length > 0;
-  if (hasRunwareKeys) {
-    console.log(`🎨 Stage 1: Runware API...`);
-    console.log(`🎨 Runware Prompt: ${prompt.substring(0, 150)}...`);
-    imageBuffer = await generateWithRunware(prompt, negPrompt);
-    if (imageBuffer) successModel = 'runware';
-  }
+  // Stage 1: AI Horde (Primary — 100% Uncensored, Free, Photorealistic)
+  console.log(`🎨 Stage 1: AI Horde...`);
+  console.log(`🎨 Horde Prompt: ${hordePrompt.substring(0, 150)}...`);
+  
+  // Set the specific top NSFW models we want Horde to prioritize
+  const hordeConfig = { 
+    group: ['CyberRealistic Pony', 'ICBINP - I Can\'t Believe It\'s Not Photography', 'AlbedoBase XL 3.1'],
+    abortIfSlow: true,
+    maxAttempts: 15,
+    isClothingRequested: isClothingRequested
+  };
+  
+  imageBuffer = await generateWithHorde(hordePrompt, hordeNegPrompt, hordeConfig);
+  if (imageBuffer) successModel = hordeConfig.successModel || 'horde';
 
-  // Stage 2: Prodia SDXL (High Quality, requires API key)
-  if (!imageBuffer && PRODIA_KEY) {
-    if (statusMsgId && hasRunwareKeys) {
+  // Stage 2: Pollinations.ai (FREE, Unlimited, Uncensored Fallback)
+  if (!imageBuffer) {
+    if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_1', user?.language));
     }
-    console.log(`🎨 Stage 2: Prodia SDXL...`);
-    const prodiaNeg = negPrompt + ", deformed, ugly, bad anatomy, bad hands, missing fingers, extra digits, extra limbs, mutation, poorly drawn";
-    imageBuffer = await generateWithProdia(prompt, prodiaNeg);
-    if (imageBuffer) successModel = 'prodia_sdxl';
+    console.log(`🎨 Stage 2: Pollinations.ai (any-dark)...`);
+    imageBuffer = await generateWithPollinations(hordePrompt, 768, 1024);
+    if (imageBuffer) successModel = 'pollinations';
   }
 
-  // Stage 3: Pollinations.ai (FREE, Unlimited, Uncensored — Primary for free users)
-  if (!imageBuffer) {
-    if (statusMsgId && (hasRunwareKeys || PRODIA_KEY)) {
+  // Stage 3: Prodia SDXL (High Quality, requires API key)
+  if (!imageBuffer && PRODIA_KEY) {
+    if (statusMsgId) {
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_2', user?.language));
     }
-    console.log(`🎨 Stage 3: Pollinations.ai...`);
-    imageBuffer = await generateWithPollinations(fluxPrompt, 768, 1024);
-    if (imageBuffer) successModel = 'pollinations';
+    console.log(`🎨 Stage 3: Prodia SDXL...`);
+    const prodiaNeg = hordeNegPrompt + ", deformed, ugly, bad anatomy, bad hands, missing fingers, extra digits, extra limbs, mutation, poorly drawn";
+    imageBuffer = await generateWithProdia(hordePrompt, prodiaNeg);
+    if (imageBuffer) successModel = 'prodia_sdxl';
   }
 
   // Stage 4: Hugging Face FLUX.1-schnell (Backup — uses monthly credits)
@@ -1414,7 +1216,7 @@ async function sendPriyaPhoto(chatId, history, characterId = 'priya', forceDescr
       await safeEditMessage(chatId, statusMsgId, getStatusMessage(characterId, 'fallback_3', user?.language));
     }
     console.log(`🎨 Stage 4: Hugging Face FLUX.1-schnell...`);
-    imageBuffer = await generateWithHF(fluxPrompt);
+    imageBuffer = await generateWithHF(hordePrompt);
     if (imageBuffer) successModel = 'hf_flux';
   }
 
@@ -1873,10 +1675,6 @@ bot.onText(/\/admin/, async (msg) => {
         [{ text: "🔑 Generate VIP Key", callback_data: "admin_genkey" }],
         [{ text: "📜 List All VIP Keys", callback_data: "admin_listkeys" }],
         [{ text: "👥 View All Users", callback_data: "admin_listusers" }],
-        [{ text: "➕ Add Runware API Key", callback_data: "admin_addapi" }],
-        [{ text: "➖ Remove Runware API Key", callback_data: "admin_removeapi" }],
-        [{ text: "🎯 Select Active API Key", callback_data: "admin_selectapi" }],
-        [{ text: "📋 List Runware API Keys", callback_data: "admin_listapi" }],
         [{ text: "🎤 Upload Sexy Voice Note", callback_data: "admin_uploadvoice" }],
         [{ text: "💬 Return to Chat Mode", callback_data: "admin_chat" }]
       ]
@@ -2048,47 +1846,6 @@ bot.on('callback_query', async (callbackQuery) => {
       }
       if (Object.keys(keys).length === 0) res = "No keys generated yet.";
       await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
-    } else if (data === 'admin_addapi') {
-      await bot.sendMessage(chatId, "🔑 Enter the new Runware API Key:", {
-        reply_markup: { force_reply: true, selective: true }
-      });
-    } else if (data === 'admin_removeapi') {
-      await bot.sendMessage(chatId, "➖ Enter the Runware API Key you want to remove:", {
-        reply_markup: { force_reply: true, selective: true }
-      });
-    } else if (data === 'admin_selectapi') {
-      const apis = getRunwareKeys();
-      if (apis.length === 0) {
-        await bot.sendMessage(chatId, "⚠️ No active Runware API keys found.");
-        return;
-      }
-      const keyboard = apis.map(key => ([{ text: `🎯 Set ${key.substring(0, 8)}...`, callback_data: `admin_setapi_${key.substring(0, 8)}` }]));
-      await bot.sendMessage(chatId, "🎯 Select the Runware API Key you want to force as Active:", {
-        reply_markup: { inline_keyboard: keyboard }
-      });
-    } else if (data.startsWith('admin_setapi_')) {
-      const prefix = data.split('_')[2];
-      const apis = getRunwareKeys();
-      const matchedKey = apis.find(k => k.startsWith(prefix));
-      if (matchedKey) {
-        const mem = loadMemory();
-        mem._preferredRunwareKey = matchedKey;
-        saveMemory(mem);
-        currentActiveRunwareKey = matchedKey;
-        currentRunwareClient = null; // Force reconnect
-        await bot.sendMessage(chatId, `✅ Preferred Runware API Key set to:\n\`${matchedKey}\``, { parse_mode: 'Markdown' });
-      } else {
-        await bot.sendMessage(chatId, "⚠️ Could not find the selected key.");
-      }
-    } else if (data === 'admin_listapi') {
-      const apis = getRunwareKeys();
-      if (apis.length === 0) {
-        await bot.sendMessage(chatId, "⚠️ No active Runware API keys found.");
-        return;
-      }
-      let res = "🔑 *Active Runware API Keys:*\n\n";
-      apis.forEach((key, i) => { res += `${i + 1}. \`${key}\`\n`; });
-      await bot.sendMessage(chatId, res, { parse_mode: 'Markdown' });
     } else if (data === 'admin_listusers') {
       const mem = loadMemory();
       let usersList = "👥 <b>Bot Users:</b>\n\n";
@@ -2257,10 +2014,22 @@ bot.on('callback_query', async (callbackQuery) => {
     
     const sentMsg = await bot.sendMessage(chatId, `📸 Photo aane wali hai...`);
     
-    // Use Runware exclusively for snapchat to be fast
     let imageBuffer = null;
-    const runwarePromptData = buildRunwarePrompt(category, char, false, forceDesc, user);
-    imageBuffer = await generateWithRunware(runwarePromptData.prompt, runwarePromptData.negativePrompt);
+    const { prompt: hordePrompt, negativePrompt: hordeNegPrompt } = buildHordePrompt(category, char, false, forceDesc, user);
+    
+    // Set fast config for Snapchat
+    const hordeConfig = { 
+      group: ['CyberRealistic Pony', 'ICBINP - I Can\'t Believe It\'s Not Photography', 'AlbedoBase XL 3.1'],
+      abortIfSlow: true,
+      maxAttempts: 10,
+      isClothingRequested: false
+    };
+    imageBuffer = await generateWithHorde(hordePrompt, hordeNegPrompt, hordeConfig);
+    
+    // Fallback to Pollinations for Snapchat if Horde is slow
+    if (!imageBuffer) {
+        imageBuffer = await generateWithPollinations(hordePrompt, 768, 1024);
+    }
     
     if (imageBuffer) {
       await bot.deleteMessage(chatId, sentMsg.message_id);
@@ -2387,33 +2156,6 @@ bot.on('message', async (msg) => {
         await bot.sendMessage(chatId, `✅ *New Key Generated*\n\n🔑 Key: \`${key}\`\n⏳ Duration: ${minutes} minutes\n🖼 Images: ${images}\n\nUser can redeem using: \`/redeem ${key}\``, { parse_mode: 'Markdown' });
       } else {
         await bot.sendMessage(chatId, "❌ Invalid format. You must provide exactly two numbers.");
-      }
-      return; // Skip normal chat handling
-    } else if (q === "🔑 Enter the new Runware API Key:") {
-      const key = text.trim();
-      const mem = loadMemory();
-      if (!mem._globalRunwareKeys) mem._globalRunwareKeys = [];
-      if (!mem._globalRunwareKeys.includes(key)) {
-        mem._globalRunwareKeys.push(key);
-        saveMemory(mem);
-        await bot.sendMessage(chatId, `✅ Added new Runware API key:\n\`${key}\``, { parse_mode: 'Markdown' });
-      } else {
-        await bot.sendMessage(chatId, "⚠️ This Runware API key is already saved.");
-      }
-      return; // Skip normal chat handling
-    } else if (q === "➖ Enter the Runware API Key you want to remove:") {
-      const keyToRemove = text.trim();
-      const mem = loadMemory();
-      if (mem._globalRunwareKeys && mem._globalRunwareKeys.includes(keyToRemove)) {
-        mem._globalRunwareKeys = mem._globalRunwareKeys.filter(k => k !== keyToRemove);
-        saveMemory(mem);
-        if (currentActiveRunwareKey === keyToRemove) {
-           currentActiveRunwareKey = null;
-           currentRunwareClient = null;
-        }
-        await bot.sendMessage(chatId, `✅ Runware API key removed successfully.`, { parse_mode: 'Markdown' });
-      } else {
-        await bot.sendMessage(chatId, "⚠️ This Runware API key was not found in memory.");
       }
       return; // Skip normal chat handling
     }
