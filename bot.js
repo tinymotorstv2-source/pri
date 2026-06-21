@@ -30,10 +30,16 @@ function getRunwareKeys() {
     ? RUNWARE_API_KEY.split(',').map(k => k.trim()).filter(Boolean) 
     : [];
   let memKeys = [];
-  if (globalMemory && globalMemory._globalRunwareKeys) {
-    memKeys = globalMemory._globalRunwareKeys;
+  let preferred = null;
+  if (globalMemory) {
+    if (globalMemory._globalRunwareKeys) memKeys = globalMemory._globalRunwareKeys;
+    if (globalMemory._preferredRunwareKey) preferred = globalMemory._preferredRunwareKey;
   }
-  return Array.from(new Set([...envKeys, ...memKeys]));
+  let allKeys = Array.from(new Set([...envKeys, ...memKeys]));
+  if (preferred && allKeys.includes(preferred)) {
+    allKeys = [preferred, ...allKeys.filter(k => k !== preferred)];
+  }
+  return allKeys;
 }
 
 async function getRunwareClient(specifiedKey = null) {
@@ -1869,6 +1875,7 @@ bot.onText(/\/admin/, async (msg) => {
         [{ text: "👥 View All Users", callback_data: "admin_listusers" }],
         [{ text: "➕ Add Runware API Key", callback_data: "admin_addapi" }],
         [{ text: "➖ Remove Runware API Key", callback_data: "admin_removeapi" }],
+        [{ text: "🎯 Select Active API Key", callback_data: "admin_selectapi" }],
         [{ text: "📋 List Runware API Keys", callback_data: "admin_listapi" }],
         [{ text: "🎤 Upload Sexy Voice Note", callback_data: "admin_uploadvoice" }],
         [{ text: "💬 Return to Chat Mode", callback_data: "admin_chat" }]
@@ -2049,6 +2056,30 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.sendMessage(chatId, "➖ Enter the Runware API Key you want to remove:", {
         reply_markup: { force_reply: true, selective: true }
       });
+    } else if (data === 'admin_selectapi') {
+      const apis = getRunwareKeys();
+      if (apis.length === 0) {
+        await bot.sendMessage(chatId, "⚠️ No active Runware API keys found.");
+        return;
+      }
+      const keyboard = apis.map(key => ([{ text: `🎯 Set ${key.substring(0, 8)}...`, callback_data: `admin_setapi_${key.substring(0, 8)}` }]));
+      await bot.sendMessage(chatId, "🎯 Select the Runware API Key you want to force as Active:", {
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    } else if (data.startsWith('admin_setapi_')) {
+      const prefix = data.split('_')[2];
+      const apis = getRunwareKeys();
+      const matchedKey = apis.find(k => k.startsWith(prefix));
+      if (matchedKey) {
+        const mem = loadMemory();
+        mem._preferredRunwareKey = matchedKey;
+        saveMemory(mem);
+        currentActiveRunwareKey = matchedKey;
+        currentRunwareClient = null; // Force reconnect
+        await bot.sendMessage(chatId, `✅ Preferred Runware API Key set to:\n\`${matchedKey}\``, { parse_mode: 'Markdown' });
+      } else {
+        await bot.sendMessage(chatId, "⚠️ Could not find the selected key.");
+      }
     } else if (data === 'admin_listapi') {
       const apis = getRunwareKeys();
       if (apis.length === 0) {
